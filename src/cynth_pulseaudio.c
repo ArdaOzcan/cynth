@@ -1,7 +1,7 @@
 #include "cynth_common.h"
+#include <pulse/error.h>
 #include <pulse/sample.h>
 #include <pulse/simple.h>
-#include <pulse/error.h>
 #include <stdio.h>
 #include <stdlib.h>
 

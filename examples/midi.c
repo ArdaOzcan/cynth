@@ -200,7 +200,8 @@ cynth_envelope_get_volume(const CynthEnvelope* envelope,
     }
     if (env < 0)
         env = 0;
-    /* CLOG_DEBUG("env: %.2f, t=%f", env, delta_note_end_sec / envelope->release); */
+    /* CLOG_DEBUG("env: %.2f, t=%f", env, delta_note_end_sec /
+     * envelope->release); */
 
     return env;
 }
@@ -220,9 +221,9 @@ cynth_oscillator_next_sample(Oscillator* oscillator,
 
 void
 cynth_voice_add_to_buffer(Voice* voice,
-						  CynthBuffer* buffer,
-						  uint16_t start_frame,
-						  uint16_t frame_amount)
+                          CynthBuffer* buffer,
+                          uint16_t start_frame,
+                          uint16_t frame_amount)
 {
     assert(start_frame < frame_amount);
 
@@ -237,8 +238,9 @@ cynth_voice_add_to_buffer(Voice* voice,
           (double)voice->delta_frame_note_start / buffer->ss.rate,
           (double)voice->delta_frame_note_end / buffer->ss.rate);
 
-        double sample = 0.15 * env * cynth_oscillator_next_sample(
-                                &voice->oscillator, frequency, buffer->ss.rate);
+        double sample = 0.15 * env *
+                        cynth_oscillator_next_sample(
+                          &voice->oscillator, frequency, buffer->ss.rate);
 
         if (!voice->is_note_on) {
             voice->delta_frame_note_end++;
@@ -300,69 +302,68 @@ cynth_voice_note_end(Voice* voice)
 
 #define SYNTHESIZER_MAX_VOICE 32
 
-typedef struct {
+typedef struct
+{
     Voice voices[SYNTHESIZER_MAX_VOICE];
     uint8_t voice_amount;
 } Synthesizer;
 
-void 
-cynth_synthesizer_note_start(Synthesizer * s,
-							 CynthEnvelope * envelope,
-                             uint8_t note) {
-    if(s->voice_amount < SYNTHESIZER_MAX_VOICE) {
+void
+cynth_synthesizer_note_start(Synthesizer* s,
+                             CynthEnvelope* envelope,
+                             uint8_t note)
+{
+    if (s->voice_amount < SYNTHESIZER_MAX_VOICE) {
         Voice v = { 0 };
         v.oscillator = (Oscillator){ 0, wave_custom };
-		v.envelope = envelope;
+        v.envelope = envelope;
 
-		cynth_voice_note_start(&v, note);
+        cynth_voice_note_start(&v, note);
         s->voices[s->voice_amount++] = v;
-		CLOG_DEBUG("New voice amount: %d", s->voice_amount);
+        CLOG_DEBUG("New voice amount: %d", s->voice_amount);
     }
 }
 
-void 
-cynth_synthesizer_note_end(Synthesizer * s,
-                           uint8_t note) {
+void
+cynth_synthesizer_note_end(Synthesizer* s, uint8_t note)
+{
     size_t v = 0;
-    for(; v < s->voice_amount; v++) {
-        if(s->voices[v].is_note_on &&
-			s->voices[v].current_note == note) {
-			cynth_voice_note_end(&s->voices[v]);
-			CLOG_DEBUG("Note %d ended.", note);
+    for (; v < s->voice_amount; v++) {
+        if (s->voices[v].is_note_on && s->voices[v].current_note == note) {
+            cynth_voice_note_end(&s->voices[v]);
+            CLOG_DEBUG("Note %d ended.", note);
         }
     }
 }
 
 void
 cynth_synthesizer_write_to_buffer(Synthesizer* s,
-								  CynthBuffer* buffer,
-								  uint16_t start_frame,
-								  uint16_t frame_amount)
+                                  CynthBuffer* buffer,
+                                  uint16_t start_frame,
+                                  uint16_t frame_amount)
 {
     size_t v = 0;
-    for(; v < s->voice_amount; v++) {
-		cynth_voice_add_to_buffer(
-			&s->voices[v], buffer, start_frame, frame_amount
-		);
+    for (; v < s->voice_amount; v++) {
+        cynth_voice_add_to_buffer(
+          &s->voices[v], buffer, start_frame, frame_amount);
 
-		if(s->voices[v].delta_frame_note_end
-				> s->voices[v].envelope->release * buffer->ss.rate) {
-			Voice temp = s->voices[v];
-			s->voices[v] = s->voices[s->voice_amount - 1];
-			s->voices[s->voice_amount - 1] = temp;
-			s->voice_amount--;
-			CLOG_DEBUG("New voice amount: %d", s->voice_amount);
-		}
-	}
+        if (s->voices[v].delta_frame_note_end >
+            s->voices[v].envelope->release * buffer->ss.rate) {
+            Voice temp = s->voices[v];
+            s->voices[v] = s->voices[s->voice_amount - 1];
+            s->voices[s->voice_amount - 1] = temp;
+            s->voice_amount--;
+            CLOG_DEBUG("New voice amount: %d", s->voice_amount);
+        }
+    }
 }
 
 void
-cynth_buffer_clear(CynthBuffer * buffer) {
-	memset(
-		buffer->data,
-		0,
-	    sizeof(int16_t) * buffer->frame_amount * buffer->ss.channels
-	);
+cynth_buffer_clear(CynthBuffer* buffer)
+{
+    memset(buffer->data,
+           0,
+           sizeof(int16_t) * buffer->frame_amount * buffer->ss.channels);
 }
 
 void
@@ -392,9 +393,9 @@ test(void)
 
     voice.envelope = &envelope;
 
-    CynthSampleSpec ss = { 
-		.rate = 44100, .format = CYNTH_SAMPLE_S16LE, .channels = 2
-    };
+    CynthSampleSpec ss = { .rate = 44100,
+                           .format = CYNTH_SAMPLE_S16LE,
+                           .channels = 2 };
     CynthEngine* engine = cynth_engine_init(&ss, "default");
 
     CynthBuffer buffer = { 0 };
@@ -406,51 +407,49 @@ test(void)
     uint16_t period = 1024;
 
     size_t play_time = 120;
-    int16_t* output = calloc(play_time * ss.rate * ss.channels, sizeof(int16_t));
+    int16_t* output =
+      calloc(play_time * ss.rate * ss.channels, sizeof(int16_t));
 
     size_t i = 0;
     for (; i < note_amount; i++) {
-	CLOG_INFO("[%d]: %lf, %lf", i, 
-		  notes[i].start_time,
-		  notes[i].duration);
+        CLOG_INFO("[%d]: %lf, %lf", i, notes[i].start_time, notes[i].duration);
     }
 
     size_t note_idx = 0;
-	Synthesizer s = { 0 };
+    Synthesizer s = { 0 };
 
-	/*
-	 * size_t e = 0;
-   	 * for(; e < midi.tracks[t].event_amount; e++) {
-  	 * 	CynthMIDIEvent evt = midi.tracks[t].events[e];
-  	 * 	CLOG_DEBUG("Event: type(%d), note.key(%d), delta(%f)",
-  	 * 				evt.type, evt.note.key, evt.delta_time);
-  	 * } 
-	 */
+    /*
+     * size_t e = 0;
+     * for(; e < midi.tracks[t].event_amount; e++) {
+     * 	CynthMIDIEvent evt = midi.tracks[t].events[e];
+     * 	CLOG_DEBUG("Event: type(%d), note.key(%d), delta(%f)",
+     * 				evt.type, evt.note.key, evt.delta_time);
+     * }
+     */
 
     size_t p = 0;
     size_t e = 0;
-	double last_event_time = 0;
+    double last_event_time = 0;
     for (; p < play_time * ss.rate / period; p++) {
-		double period_start_time = ((double)p * period) / ss.rate;
-		double period_end_time = ((p + 1.0) * period) / ss.rate;
+        double period_start_time = ((double)p * period) / ss.rate;
+        double period_end_time = ((p + 1.0) * period) / ss.rate;
 
-		while(last_event_time < period_end_time) {
-			CynthMIDIEvent evt = midi.tracks[t].events[e];
-			if(evt.type == CYNTH_MIDI_EVENT_NOTE_ON) {
-				cynth_synthesizer_note_start(&s, &envelope, evt.note.key);
-			} else if(evt.type == CYNTH_MIDI_EVENT_NOTE_OFF) {
-				cynth_synthesizer_note_end(&s, evt.note.key);
-			}
-			last_event_time += delta_time_to_seconds(
-					midi.header, evt.delta_time
-			);
-			e++;
-		}
+        while (last_event_time < period_end_time) {
+            CynthMIDIEvent evt = midi.tracks[t].events[e];
+            if (evt.type == CYNTH_MIDI_EVENT_NOTE_ON) {
+                cynth_synthesizer_note_start(&s, &envelope, evt.note.key);
+            } else if (evt.type == CYNTH_MIDI_EVENT_NOTE_OFF) {
+                cynth_synthesizer_note_end(&s, evt.note.key);
+            }
+            last_event_time +=
+              delta_time_to_seconds(midi.header, evt.delta_time);
+            e++;
+        }
 
-		cynth_buffer_clear(&buffer);
+        cynth_buffer_clear(&buffer);
         cynth_synthesizer_write_to_buffer(&s, &buffer, 0, period);
 
-		/* For wav export */
+        /* For wav export */
         memcpy(output + p * period * ss.channels,
                buffer.data,
                period * ss.channels * sizeof(int16_t));
@@ -485,8 +484,8 @@ read_midi_and_play(void)
 
     CynthEngine* engine;
     CynthSampleSpec ss = { .format = CYNTH_SAMPLE_S16LE,
-			   .channels = 2,
- 			   .rate = 44100 };
+                           .channels = 2,
+                           .rate = 44100 };
 
     engine = cynth_engine_init(&ss, "default");
 

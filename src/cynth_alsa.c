@@ -86,7 +86,9 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
 }
 
 CynthError
-cynth_engine_write_buffer(CynthEngine* engine, const CynthBuffer* buffer, size_t frame_amount)
+cynth_engine_write_buffer(CynthEngine* engine,
+                          const CynthBuffer* buffer,
+                          size_t frame_amount)
 {
     snd_pcm_sframes_t frames_left = frame_amount;
     int16_t* ptr = buffer->data;

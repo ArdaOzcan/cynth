@@ -9,7 +9,6 @@
 #include "cynth_alsa.c"
 #endif
 
-
 static int16_t
 clamp_i16(int32_t val, int16_t min, int16_t max)
 {
