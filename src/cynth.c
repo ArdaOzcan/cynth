@@ -1,8 +1,14 @@
 #include "cynth.h"
-#include "ccore.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef _WIN32
+/* Windows implementation*/
+#else
+#include "cynth_alsa.c"
+#endif
+
 
 static int16_t
 clamp_i16(int32_t val, int16_t min, int16_t max)
@@ -15,27 +21,27 @@ clamp_i16(int32_t val, int16_t min, int16_t max)
 }
 
 void
-caudio_buffer_init(CAudioBuffer* buffer,
-                   pa_sample_spec sample_spec,
-                   float seconds,
-                   Allocator* allocator)
+cynth_buffer_init(CynthBuffer* buffer,
+                  CynthSampleSpec sample_spec,
+                  float seconds,
+                  void* backing_data)
 {
     buffer->ss = sample_spec;
-    buffer->sample_amount = seconds * sample_spec.rate;
-    size_t array_length = buffer->ss.channels * buffer->sample_amount;
-    buffer->data = make(int16_t, array_length, allocator);
-    memset(buffer->data, 0, sizeof(int16_t) * array_length);
+    buffer->frame_amount = seconds * sample_spec.rate;
+    buffer->data = backing_data;
+    size_t data_length = buffer->ss.channels * buffer->frame_amount;
+    memset(buffer->data, 0, sizeof(int16_t) * data_length);
 }
 
 // t is 0-1
 float
-caudio_sine_normalized(float t)
+cynth_sine_normalized(float t)
 {
-    return sinf(t * 2.0f * CAUDIO_PI);
+    return sinf(t * 2.0f * CYNTH_PI);
 }
 
 float
-caudio_triangle_normalized(float t)
+cynth_triangle_normalized(float t)
 {
     t -= (int)t;
     if (t < 0.5f)
@@ -45,7 +51,7 @@ caudio_triangle_normalized(float t)
 }
 
 float
-caudio_square_normalized(float t)
+cynth_square_normalized(float t)
 {
     t -= (int)t;
     if (t < 0.5f) {
@@ -56,27 +62,46 @@ caudio_square_normalized(float t)
 }
 
 int
-caudio_buffer_add_wave(const CAudioBuffer* buffer,
-                       size_t start_frame,
-                       size_t frame_amount,
-                       float (*wave_fn)(float),
-                       float frequency,
-                       float volume)
+cynth_buffer_add_wave(const CynthBuffer* buffer,
+                      CynthEnvelope envelope,
+                      size_t start_frame,
+                      size_t frame_amount,
+                      float (*wave_fn)(float),
+                      float frequency,
+                      float volume)
 {
-    size_t frame = 0;
     float phase = 0;
-    size_t ramp_samples = (size_t)(0.010f * buffer->ss.rate);
-    int16_t* buffer_start = &buffer->data[start_frame];
-    for (frame = 0; frame < frame_amount; frame++) {
+    size_t attack_frames = (size_t)(envelope.attack * buffer->ss.rate);
+    size_t decay_frames = (size_t)(envelope.decay * buffer->ss.rate);
+    size_t release_frames = (size_t)(envelope.release * buffer->ss.rate);
+
+    float release_max = envelope.sustain;
+    if (attack_frames > frame_amount) {
+        float attack_t = (float)frame_amount / attack_frames;
+        release_max = attack_t;
+    } else if (attack_frames + decay_frames > frame_amount) {
+        float decay_t = (float)(frame_amount - attack_frames) / decay_frames;
+        release_max = 1.0f + decay_t * (envelope.sustain - 1.0f);
+    }
+
+    int16_t* buffer_start = &buffer->data[start_frame * 2];
+    size_t frame = 0;
+    for (frame = 0; frame < frame_amount + release_frames; frame++) {
         phase = frequency * frame / buffer->ss.rate;
         if (phase >= 1.0f)
             phase -= 1.0f;
 
-        float env = 1.0f;
-        if (frame < ramp_samples) {
-            env = (float)frame / ramp_samples;
-        } else if (frame >= frame_amount - ramp_samples) {
-            env = (float)(frame_amount - frame) / ramp_samples;
+        float env = envelope.sustain;
+        if (frame > frame_amount) {
+            float release_t = (float)(frame - frame_amount) / release_frames;
+            env = release_max * (1.0f - release_t);
+        } else if (frame < attack_frames) {
+            float attack_t = (float)frame / attack_frames;
+            /* Linear */
+            env = attack_t;
+        } else if (frame <= attack_frames + decay_frames) {
+            float decay_t = (float)(frame - attack_frames) / decay_frames;
+            env = 1.0f + decay_t * (envelope.sustain - 1.0f);
         }
 
         float s = wave_fn(phase) * env;
@@ -98,34 +123,36 @@ caudio_buffer_add_wave(const CAudioBuffer* buffer,
 }
 
 void
-caudio_write_notes(const CAudioBuffer* buffer,
-                   CAudioNote* notes,
-                   size_t note_amount,
-                   float (*wave_fn)(float))
+cynth_write_notes(const CynthBuffer* buffer,
+                  CynthNote* notes,
+                  size_t note_amount,
+                  CynthEnvelope envelope,
+                  float (*wave_fn)(float))
 {
     size_t i = 0;
     for (i = 0; i < note_amount; i++) {
-        CAudioNote note = notes[i];
-        size_t start_frame =
-          (size_t)(note.start_time * buffer->ss.rate * buffer->ss.channels);
-        caudio_buffer_add_wave(buffer,
-                               start_frame,
-                               note.duration * buffer->ss.rate,
-                               wave_fn,
-                               note.frequency,
-                               note.volume);
+        printf("Note %zu\n", i);
+        CynthNote note = notes[i];
+        size_t start_frame = (size_t)(note.start_time * buffer->ss.rate);
+        cynth_buffer_add_wave(buffer,
+                              envelope,
+                              start_frame,
+                              note.duration * buffer->ss.rate,
+                              wave_fn,
+                              note.frequency,
+                              note.volume);
     }
 }
 
 void
-caudio_buffer_fprint(const CAudioBuffer* buffer, FILE* file)
+cynth_buffer_fprint(const CynthBuffer* buffer, FILE* file)
 {
     size_t frame = 0;
     fprintf(file, "[\n");
-    for (; frame < buffer->sample_amount; frame++) {
+    for (; frame < buffer->frame_amount; frame++) {
         int16_t new_sample_l = buffer->data[frame * 2];
         fprintf(file, "{\"frame\": %zu, \"sample\": %d}", frame, new_sample_l);
-        if (frame != buffer->sample_amount - 1) {
+        if (frame != buffer->frame_amount - 1) {
             printf(",\n");
         }
     }
@@ -133,24 +160,25 @@ caudio_buffer_fprint(const CAudioBuffer* buffer, FILE* file)
 }
 
 int
-caudio_buffer_export_wav(const CAudioBuffer* buffer, const char* out_path)
+cynth_buffer_export_wav(const CynthBuffer* buffer, const char* out_path)
 {
     size_t pcm_data_size =
-      buffer->sample_amount * buffer->ss.channels * sizeof(int16_t);
-    CAudioWAVHeader header = { .ChunkID = "RIFF",
-                               .ChunkSize = 36 + pcm_data_size,
-                               .Format = "WAVE",
-                               .Subchunk1ID = "fmt ",
-                               .Subchunk1Size = 16,
-                               .AudioFormat = 1,
-                               .NumChannels = buffer->ss.channels,
-                               .SampleRate = buffer->ss.rate,
-                               .ByteRate =
-                                 buffer->ss.rate * buffer->ss.channels * 16 / 8,
-                               .BlockAlign = buffer->sample_amount * 16 / 8,
-                               .BitsPerSample = 16,
-                               .Subchunk2ID = "data",
-                               .Subchunk2Size = pcm_data_size };
+      buffer->frame_amount * buffer->ss.channels * sizeof(int16_t);
+
+    CynthWAVHeader header = { .ChunkID = "RIFF",
+                              .ChunkSize = 36 + pcm_data_size,
+                              .Format = "WAVE",
+                              .Subchunk1ID = "fmt ",
+                              .Subchunk1Size = 16,
+                              .AudioFormat = 1,
+                              .NumChannels = buffer->ss.channels,
+                              .SampleRate = buffer->ss.rate,
+                              .ByteRate =
+                                buffer->ss.rate * buffer->ss.channels * 16 / 8,
+                              .BlockAlign = buffer->frame_amount * 16 / 8,
+                              .BitsPerSample = 16,
+                              .Subchunk2ID = "data",
+                              .Subchunk2Size = pcm_data_size };
 
     FILE* file = fopen(out_path, "wb");
     if (file == NULL) {
