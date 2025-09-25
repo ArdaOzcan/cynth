@@ -67,76 +67,11 @@ typedef struct
     CynthSampleSpec ss;
 } CynthBuffer;
 
-typedef struct
-{
-    float attack;
-    float decay;
-    float sustain;
-    float release;
-} CynthEnvelope;
-
-typedef struct
-{
-    float frequency;
-    float start_time;
-    float duration;
-    float volume;
-} CynthNote;
-
 typedef enum CynthError
 {
     CYNTH_ERROR_NONE = 0,
     CYNTH_ERROR_WRITE,
     CYNTH_ERROR_DRAIN,
 } CynthError;
-
-typedef enum
-{
-    CYNTH_MIDI_FORMAT_SINGLE = 0,
-    CYNTH_MIDI_FORMAT_VERTICAL = 1,
-    CYNTH_MIDI_FORMAT_HORIZONTAL = 2,
-} CynthMIDIFormat;
-
-typedef struct
-{
-    CynthMIDIFormat format;
-    uint16_t num_tracks;
-    uint16_t division;
-} CynthMIDIHeader;
-
-typedef struct
-{
-    uint8_t key;
-    uint8_t velocity;
-} CynthMIDIEvent_Note;
-
-typedef enum
-{
-    CYNTH_MIDI_EVENT_UNKNOWN = -1,
-    CYNTH_MIDI_EVENT_NOTE_ON,
-    CYNTH_MIDI_EVENT_NOTE_OFF,
-} CynthMIDIEventType;
-
-typedef struct
-{
-    CynthMIDIEventType type;
-    uint32_t delta_time;
-    union
-    {
-        CynthMIDIEvent_Note note;
-    };
-} CynthMIDIEvent;
-
-typedef struct
-{
-    size_t event_amount;
-    CynthMIDIEvent* events;
-} CynthMIDITrackInfo;
-
-typedef struct
-{
-    CynthMIDIHeader header;
-    CynthMIDITrackInfo* tracks;
-} CynthMIDIObject;
 
 #endif

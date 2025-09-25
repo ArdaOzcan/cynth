@@ -4262,7 +4262,7 @@ main(void)
     //                        note.frequency,
     //                        note.volume);
     //
-    cynth_write_notes(&buffer,
+    cynth_buffer_write_notes(&buffer,
                       notes_pink_panther,
                       sizeof(notes_pink_panther) / sizeof(*notes_pink_panther),
                       env,

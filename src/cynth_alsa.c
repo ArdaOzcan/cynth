@@ -50,10 +50,9 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
     int retval = 0;
     if ((retval = snd_pcm_open(
            &engine->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-        fprintf(stderr,
-                "ERROR: Can't open \"%s\" PCM device. %s\n",
-                device,
-                snd_strerror(retval));
+        CLOG_ERROR("ERROR: Can't open \"%s\" PCM device. %s",
+                   device,
+                   snd_strerror(retval));
         return NULL;
     }
 
@@ -71,9 +70,8 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
       engine->pcm_handle, engine->params, &ss->rate, 0);
 
     if ((retval = snd_pcm_hw_params(engine->pcm_handle, engine->params)) < 0) {
-        fprintf(stderr,
-                "ERROR: Can't set hardware params. %s\n",
-                snd_strerror(retval));
+        CLOG_ERROR("ERROR: Can't set hardware params. %s",
+                   snd_strerror(retval));
         return NULL;
     }
 
@@ -103,12 +101,11 @@ cynth_engine_write_buffer(CynthEngine* engine,
                          period_size > frames_left ? frames_left : period_size);
 
         if (retval == -EPIPE) {
-            // Buffer underrun -> reset and retry
-            CLOG_WARNING("Buffer underrun: %s\n", snd_strerror(retval));
+            CLOG_WARNING("Buffer underrun: %s", snd_strerror(retval));
             snd_pcm_prepare(engine->pcm_handle);
             continue;
         } else if (retval < 0) {
-            CLOG_ERROR("Can't write to PCM device. %s\n", snd_strerror(retval));
+            CLOG_ERROR("Can't write to PCM device. %s", snd_strerror(retval));
             return CYNTH_ERROR_WRITE;
         }
 

@@ -1,6 +1,6 @@
 #include "ccore.h"
 #include "clog.h"
-#include "cynth_common.h"
+#include "cynth.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -27,6 +27,8 @@ void
 cynth_midi_object_init(CynthMIDIObject* midi, Allocator* alloc)
 {
     midi->header = (CynthMIDIHeader){ 0 };
+	/* Default to 90 BPM */
+	midi->header.tempo = 1e6 * 0.25 * (90.0 / 60.0);
     midi->tracks = array(CynthMIDITrackInfo, 32, alloc);
 }
 
@@ -224,7 +226,7 @@ cynth_midi_read_event_sysex(ByteReader* reader)
 }
 
 void
-cynth_midi_read_event_meta(ByteReader* reader)
+cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
 {
     (void)*byte_reader_read(reader, uint8_t); /* Status byte */
 
@@ -275,6 +277,7 @@ cynth_midi_read_event_meta(ByteReader* reader)
                                  (*byte_reader_read(reader, uint8_t) << 8) |
                                  *byte_reader_read(reader, uint8_t);
                 CLOG_INFO("Set Tempo: %u microseconds per quarter note", tempo);
+				header->tempo = tempo;
             }
             break;
 
@@ -344,7 +347,7 @@ cynth_midi_read_event(ByteReader* reader,
     if (0xF0 <= status && status <= 0xFE) {
         cynth_midi_read_event_sysex(reader);
     } else if (status == 0xFF) {
-        cynth_midi_read_event_meta(reader);
+        cynth_midi_read_event_meta(reader, &midi->header);
     } else {
         cynth_midi_read_event_midi(
           reader, midi, delta_time, previous_midi_evt, new_status);
