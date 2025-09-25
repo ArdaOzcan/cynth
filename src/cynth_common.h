@@ -112,6 +112,7 @@ typedef struct
 
 typedef enum
 {
+    CYNTH_MIDI_EVENT_UNKNOWN = -1,
     CYNTH_MIDI_EVENT_NOTE_ON,
     CYNTH_MIDI_EVENT_NOTE_OFF,
 } CynthMIDIEventType;
@@ -119,7 +120,7 @@ typedef enum
 typedef struct
 {
     CynthMIDIEventType type;
-    uint8_t delta_time;
+    uint32_t delta_time;
     union
     {
         CynthMIDIEvent_Note note;

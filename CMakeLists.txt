@@ -47,21 +47,21 @@ find_package(ALSA)
 
 target_link_libraries(cynth PUBLIC ALSA::ALSA ccore clog m ${PULSE_LIBRARIES})
 
-add_executable(cynth_example_synth ${CMAKE_CURRENT_SOURCE_DIR}/examples/synth.c)
+add_executable(cynth_example_synth ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_synth.c)
 target_include_directories(cynth_example_synth PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     ${PULSE_INCLUDE_DIRS}       
 )
 target_link_libraries(cynth_example_synth PRIVATE cynth ccore ${PULSE_LIBRARIES})
 
-add_executable(cynth_example_midi ${CMAKE_CURRENT_SOURCE_DIR}/examples/midi.c)
+add_executable(cynth_example_midi ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_midi.c)
 target_include_directories(cynth_example_midi PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     ${PULSE_INCLUDE_DIRS}       
 )
 target_link_libraries(cynth_example_midi PRIVATE cynth ccore ${PULSE_LIBRARIES})
 
-add_executable(cynth_example_async ${CMAKE_CURRENT_SOURCE_DIR}/examples/async.c)
+add_executable(cynth_example_async ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_async.c)
 target_include_directories(cynth_example_async PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
     ${PULSE_INCLUDE_DIRS}       

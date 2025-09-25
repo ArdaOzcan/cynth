@@ -138,7 +138,7 @@ cynth_midi_read_chunk_header(ByteReader* reader, CynthMIDIHeader* out_header)
 static void
 cynth_midi_read_event_midi(ByteReader* reader,
                            CynthMIDIObject* midi,
-                           uint8_t delta_time,
+                           uint32_t delta_time,
                            uint8_t previous_status,
                            uint8_t* new_status)
 {
@@ -147,12 +147,15 @@ cynth_midi_read_event_midi(ByteReader* reader,
     if (status & 0x80) {
         status = 0xF0 & *byte_reader_read(reader, uint8_t);
     } else {
+        /* Running status */
         status = previous_status;
     }
 
     *new_status = status;
     CynthMIDIEvent evt = { 0 };
     evt.delta_time = delta_time;
+    evt.type = CYNTH_MIDI_EVENT_UNKNOWN;
+
     size_t track_idx = array_len(midi->tracks) - 1;
 
     switch (status) {
@@ -161,16 +164,24 @@ cynth_midi_read_event_midi(ByteReader* reader,
             evt.type = CYNTH_MIDI_EVENT_NOTE_OFF;
             evt.note.key = 0x7F & *byte_reader_read(reader, uint8_t);
             evt.note.velocity = 0x7F & *byte_reader_read(reader, uint8_t);
+            CLOG_INFO("Added evt %d to track %u. New length of track: %zu"
+                      " delta time = %lu",
+                      evt.type,
+                      track_idx,
+                      array_len(midi->tracks[track_idx].events),
+                      evt.delta_time);
             break;
         case 0x90:
             CLOG_INFO("Note on");
             evt.type = CYNTH_MIDI_EVENT_NOTE_ON;
             evt.note.key = 0x7F & *byte_reader_read(reader, uint8_t);
             evt.note.velocity = 0x7F & *byte_reader_read(reader, uint8_t);
-            CLOG_INFO("Added evt %d to track %d. New length of track: %zu",
+            CLOG_INFO("Added evt %d to track %d. New length of track: %zu"
+                      " delta time = %lu",
                       evt.type,
                       track_idx,
-                      array_len(midi->tracks[track_idx].events));
+                      array_len(midi->tracks[track_idx].events),
+                      evt.delta_time);
             break;
         case 0xa0:
             CLOG_INFO("Polyphonic key pressure");
@@ -204,7 +215,12 @@ cynth_midi_read_event_midi(ByteReader* reader,
 void
 cynth_midi_read_event_sysex(ByteReader* reader)
 {
-    CLOG_WARNING("Sysex event not implemented");
+    assert(*byte_reader_read(reader, uint8_t) == 0xF0);
+    uint32_t length = byte_reader_read_vlq_be32(reader);
+    uint32_t i = 0;
+    for (i = 0; i < length; i++)
+        (void)*byte_reader_read(reader, uint8_t);
+    CLOG_WARNING("Sysex message ignored.");
 }
 
 void
@@ -305,8 +321,7 @@ cynth_midi_read_event_meta(ByteReader* reader)
         } break;
 
         default: {
-            // CLOG_WARNING("Unknown Meta Event: 0x%02X, length %u", type,
-            // length);
+            CLOG_WARNING("Unknown Meta Event: 0x%02X, length %u", type, length);
             uint32_t i = 0;
             for (i = 0; i < length; i++)
                 (void)*byte_reader_read(reader, uint8_t);
@@ -330,11 +345,7 @@ cynth_midi_read_event(ByteReader* reader,
         cynth_midi_read_event_sysex(reader);
     } else if (status == 0xFF) {
         cynth_midi_read_event_meta(reader);
-    } else if (0x80 <= status && status <= 0xEF) {
-        cynth_midi_read_event_midi(
-          reader, midi, delta_time, previous_midi_evt, new_status);
     } else {
-        /* Running status */
         cynth_midi_read_event_midi(
           reader, midi, delta_time, previous_midi_evt, new_status);
     }
