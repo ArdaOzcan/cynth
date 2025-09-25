@@ -1,4 +1,5 @@
-#include "cynth.h" #include <math.h>
+#include "cynth.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
