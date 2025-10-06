@@ -83,6 +83,14 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
     return engine;
 }
 
+uint32_t
+cynth_engine_get_period_size(CynthEngine* engine)
+{
+    snd_pcm_uframes_t period_size;
+    snd_pcm_hw_params_get_period_size(engine->params, &period_size, 0);
+    return period_size;
+}
+
 CynthError
 cynth_engine_write_buffer(CynthEngine* engine,
                           const CynthBuffer* buffer,
@@ -102,7 +110,7 @@ cynth_engine_write_buffer(CynthEngine* engine,
 
         if (retval == -EPIPE) {
             CLOG_WARNING("Buffer underrun: %s", snd_strerror(retval));
-            snd_pcm_prepare(engine->pcm_handle);
+            snd_pcm_recover(engine->pcm_handle, retval, false);
             continue;
         } else if (retval < 0) {
             CLOG_ERROR("Can't write to PCM device. %s", snd_strerror(retval));
@@ -127,9 +135,17 @@ cynth_engine_drain(CynthEngine* engine)
 {
     int retval = snd_pcm_drain(engine->pcm_handle);
     if (retval < 0) {
-        fprintf(stderr,
-                "ERROR: Can't write to PCM device. %s\n",
-                snd_strerror(retval));
+        fprintf(stderr, "ERROR: ALSA Draining. %s\n", snd_strerror(retval));
+    }
+    return CYNTH_ERROR_NONE;
+}
+
+CynthError
+cynth_engine_drop(CynthEngine* engine)
+{
+    int retval = snd_pcm_drop(engine->pcm_handle);
+    if (retval < 0) {
+        fprintf(stderr, "ERROR: ALSA Dropping. %s\n", snd_strerror(retval));
     }
     return CYNTH_ERROR_NONE;
 }

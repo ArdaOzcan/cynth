@@ -23,7 +23,7 @@
 #define CYNTH_FREQ_As 466.16F /* A#4 / Bb4*/
 #define CYNTH_FREQ_B 493.88F
 
-#define CYNTH_SYNTHESIZER_MAX_VOICE 32
+#define CYNTH_SYNTHESIZER_MAX_VOICE 64
 
 typedef struct
 {
@@ -118,8 +118,29 @@ typedef struct
 
 typedef struct CynthEngine CynthEngine;
 
+void
+cynth_midi_track_to_notes(CynthMIDITrackInfo track,
+                          CynthMIDIHeader header,
+                          CynthNote* notes,
+                          size_t* note_amount);
+
+double
+cynth_midi_to_freq(double midi);
+
+double
+cynth_freq_to_midi(double freq);
+
+int
+cynth_freq_to_nearest_midi(double freq);
+
+double
+cynth_cents_from_freq(double freq);
+
 CynthEngine*
 cynth_engine_init(CynthSampleSpec* ss, const char* device);
+
+uint32_t
+cynth_engine_get_period_size(CynthEngine* engine);
 
 CynthError
 cynth_engine_write_buffer(CynthEngine* engine,
@@ -131,6 +152,9 @@ cynth_engine_deinit(CynthEngine* engine);
 
 CynthError
 cynth_engine_drain(CynthEngine* engine);
+
+CynthError
+cynth_engine_drop(CynthEngine* engine);
 
 #pragma pack(push, 1)
 typedef struct
@@ -181,8 +205,9 @@ cynth_envelope_get_volume(const CynthEnvelope* envelope,
 void
 cynth_buffer_init(CynthBuffer* buffer,
                   CynthSampleSpec sample_spec,
-                  float seconds,
+                  uint32_t frame_amount,
                   void* backing_data);
+
 int
 cynth_buffer_add_wave(const CynthBuffer* buffer,
                       CynthEnvelope envelope,
@@ -214,7 +239,8 @@ void
 cynth_voice_add_to_buffer(CynthVoice* voice,
                           CynthBuffer* buffer,
                           uint16_t start_frame,
-                          uint16_t frame_amount);
+                          uint16_t frame_amount,
+                          double volume);
 
 void
 cynth_voice_write_to_buffer(CynthVoice* voice,

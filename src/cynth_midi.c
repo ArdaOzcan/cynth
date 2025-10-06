@@ -27,8 +27,8 @@ void
 cynth_midi_object_init(CynthMIDIObject* midi, Allocator* alloc)
 {
     midi->header = (CynthMIDIHeader){ 0 };
-	/* Default to 90 BPM */
-	midi->header.tempo = 1e6 * 0.25 * (90.0 / 60.0);
+    /* Default to 90 BPM */
+    midi->header.tempo = 1e6 * 0.25 * (90.0 / 60.0);
     midi->tracks = array(CynthMIDITrackInfo, 32, alloc);
 }
 
@@ -111,7 +111,7 @@ cynth_midi_read_chunk_type(ByteReader* reader)
     if (strncmp(type, "MThd", 4) == 0) {
         return CYNTH_MIDI_CHUNK_TYPE_HEADER;
     } else if (strncmp(type, "MTrk", 4) == 0) {
-        CLOG_INFO("Track");
+        CLOG_DEBUG("Track");
         return CYNTH_MIDI_CHUNK_TYPE_TRACK;
     }
 
@@ -131,7 +131,7 @@ cynth_midi_read_chunk_header(ByteReader* reader, CynthMIDIHeader* out_header)
     assert(format != 0 || num_tracks <= 1);
     uint16_t division = to_be16(byte_reader_read(reader, uint16_t));
 
-    CLOG_INFO("%04x, %04x, %04x", format, num_tracks, division);
+    CLOG_DEBUG("%04x, %04x, %04x", format, num_tracks, division);
     out_header->format = format;
     out_header->division = division;
     out_header->num_tracks = num_tracks;
@@ -144,7 +144,7 @@ cynth_midi_read_event_midi(ByteReader* reader,
                            uint8_t previous_status,
                            uint8_t* new_status)
 {
-    CLOG_INFO("MIDI Event");
+    CLOG_DEBUG("MIDI Event");
     uint8_t status = *byte_reader_peek(reader, uint8_t);
     if (status & 0x80) {
         status = 0xF0 & *byte_reader_read(reader, uint8_t);
@@ -162,49 +162,49 @@ cynth_midi_read_event_midi(ByteReader* reader,
 
     switch (status) {
         case 0x80:
-            CLOG_INFO("Note off");
+            CLOG_DEBUG("Note off");
             evt.type = CYNTH_MIDI_EVENT_NOTE_OFF;
             evt.note.key = 0x7F & *byte_reader_read(reader, uint8_t);
             evt.note.velocity = 0x7F & *byte_reader_read(reader, uint8_t);
-            CLOG_INFO("Added evt %d to track %u. New length of track: %zu"
-                      " delta time = %lu",
-                      evt.type,
-                      track_idx,
-                      array_len(midi->tracks[track_idx].events),
-                      evt.delta_time);
+            CLOG_DEBUG("Added evt %d to track %u. New length of track: %zu"
+                       " delta time = %lu",
+                       evt.type,
+                       track_idx,
+                       array_len(midi->tracks[track_idx].events),
+                       evt.delta_time);
             break;
         case 0x90:
-            CLOG_INFO("Note on");
+            CLOG_DEBUG("Note on");
             evt.type = CYNTH_MIDI_EVENT_NOTE_ON;
             evt.note.key = 0x7F & *byte_reader_read(reader, uint8_t);
             evt.note.velocity = 0x7F & *byte_reader_read(reader, uint8_t);
-            CLOG_INFO("Added evt %d to track %d. New length of track: %zu"
-                      " delta time = %lu",
-                      evt.type,
-                      track_idx,
-                      array_len(midi->tracks[track_idx].events),
-                      evt.delta_time);
+            CLOG_DEBUG("Added evt %d to track %d. New length of track: %zu"
+                       " delta time = %lu",
+                       evt.type,
+                       track_idx,
+                       array_len(midi->tracks[track_idx].events),
+                       evt.delta_time);
             break;
         case 0xa0:
-            CLOG_INFO("Polyphonic key pressure");
+            CLOG_DEBUG("Polyphonic key pressure");
             (void)*byte_reader_read(reader, uint8_t);
             (void)*byte_reader_read(reader, uint8_t);
             break;
         case 0xb0:
-            CLOG_INFO("Control change");
+            CLOG_DEBUG("Control change");
             (void)*byte_reader_read(reader, uint8_t);
             (void)*byte_reader_read(reader, uint8_t);
             break;
         case 0xc0:
-            CLOG_INFO("Program change");
+            CLOG_DEBUG("Program change");
             (void)*byte_reader_read(reader, uint8_t);
             break;
         case 0xd0:
-            CLOG_INFO("Channel pressure");
+            CLOG_DEBUG("Channel pressure");
             (void)*byte_reader_read(reader, uint8_t);
             break;
         case 0xe0:
-            CLOG_INFO("Pitch wheel change");
+            CLOG_DEBUG("Pitch wheel change");
             (void)*byte_reader_read(reader, uint8_t);
             (void)*byte_reader_read(reader, uint8_t);
             break;
@@ -226,20 +226,20 @@ cynth_midi_read_event_sysex(ByteReader* reader)
 }
 
 void
-cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
+cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader* header)
 {
     (void)*byte_reader_read(reader, uint8_t); /* Status byte */
 
     uint8_t type = *byte_reader_read(reader, uint8_t);
     uint32_t length = byte_reader_read_vlq_be32(reader);
-    CLOG_INFO("Event length: %u", length);
+    CLOG_DEBUG("Event length: %u", length);
 
     switch (type) {
         case 0x00:
             if (length == 2) {
                 uint16_t seq = (*byte_reader_read(reader, uint8_t) << 8) |
                                *byte_reader_read(reader, uint8_t);
-                CLOG_INFO("Sequence Number: %u", seq);
+                CLOG_DEBUG("Sequence Number: %u", seq);
             }
             break;
 
@@ -254,20 +254,20 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
             for (uint32_t i = 0; i < length; i++)
                 text[i] = *byte_reader_read(reader, uint8_t);
             text[length] = '\0';
-            CLOG_INFO("Text Meta Event 0x%02X: %s", type, text);
+            CLOG_DEBUG("Text Meta Event 0x%02X: %s", type, text);
             free(text);
         } break;
 
         case 0x20:
             if (length == 1) {
                 uint8_t chan = *byte_reader_read(reader, uint8_t);
-                CLOG_INFO("MIDI Channel Prefix: %u", chan);
+                CLOG_DEBUG("MIDI Channel Prefix: %u", chan);
             }
             break;
 
         case 0x2F:
             if (length == 0) {
-                CLOG_INFO("End of Track");
+                CLOG_DEBUG("End of Track");
             }
             break;
 
@@ -276,8 +276,9 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
                 uint32_t tempo = (*byte_reader_read(reader, uint8_t) << 16) |
                                  (*byte_reader_read(reader, uint8_t) << 8) |
                                  *byte_reader_read(reader, uint8_t);
-                CLOG_INFO("Set Tempo: %u microseconds per quarter note", tempo);
-				header->tempo = tempo;
+                CLOG_DEBUG("Set Tempo: %u microseconds per quarter note",
+                           tempo);
+                header->tempo = tempo;
             }
             break;
 
@@ -288,7 +289,7 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
                 uint8_t se = *byte_reader_read(reader, uint8_t);
                 uint8_t fr = *byte_reader_read(reader, uint8_t);
                 uint8_t ff = *byte_reader_read(reader, uint8_t);
-                CLOG_INFO(
+                CLOG_DEBUG(
                   "SMPTE Offset: %02u:%02u:%02u:%02u.%02u", hr, mn, se, fr, ff);
             }
             break;
@@ -299,12 +300,12 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
                 uint8_t dd = *byte_reader_read(reader, uint8_t);
                 uint8_t cc = *byte_reader_read(reader, uint8_t);
                 uint8_t bb = *byte_reader_read(reader, uint8_t);
-                CLOG_INFO("Time Signature: %u/%u, MIDI clocks per click: %u, "
-                          "32nd notes per quarter: %u",
-                          nn,
-                          1 << dd,
-                          cc,
-                          bb);
+                CLOG_DEBUG("Time Signature: %u/%u, MIDI clocks per click: %u, "
+                           "32nd notes per quarter: %u",
+                           nn,
+                           1 << dd,
+                           cc,
+                           bb);
             }
             break;
 
@@ -312,12 +313,12 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader * header)
             if (length == 2) {
                 int8_t sf = (int8_t)*byte_reader_read(reader, uint8_t);
                 uint8_t mi = *byte_reader_read(reader, uint8_t);
-                CLOG_INFO("Key Signature: %d %s", sf, mi ? "minor" : "major");
+                CLOG_DEBUG("Key Signature: %d %s", sf, mi ? "minor" : "major");
             }
             break;
 
         case 0x7F: {
-            CLOG_INFO("Sequencer Specific Event, length %u", length);
+            CLOG_DEBUG("Sequencer Specific Event, length %u", length);
             uint32_t i = 0;
             for (i = 0; i < length; i++)
                 (void)*byte_reader_read(reader, uint8_t);
@@ -340,10 +341,10 @@ cynth_midi_read_event(ByteReader* reader,
                       uint8_t* new_status)
 {
     uint32_t delta_time = byte_reader_read_vlq_be32(reader);
-    CLOG_INFO("Delta time: %u", delta_time);
+    CLOG_DEBUG("Delta time: %u", delta_time);
 
     uint8_t status = *byte_reader_peek(reader, uint8_t);
-    CLOG_INFO("Status: %u", status);
+    CLOG_DEBUG("Status: %u", status);
     if (0xF0 <= status && status <= 0xFE) {
         cynth_midi_read_event_sysex(reader);
     } else if (status == 0xFF) {
@@ -358,7 +359,7 @@ static void
 cynth_midi_read_chunk_track(ByteReader* reader, CynthMIDIObject* midi)
 {
     uint32_t length = to_be32(byte_reader_read(reader, uint32_t));
-    CLOG_INFO("Track Chunk length: %u", length);
+    CLOG_DEBUG("Track Chunk length: %u", length);
     size_t start_offset = reader->offset;
     uint8_t previous_midi_evt = 0;
     while (reader->offset - start_offset < length) {
