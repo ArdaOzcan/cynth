@@ -7,7 +7,8 @@
 typedef struct CynthEngine
 {
     snd_pcm_t* pcm_handle;
-    snd_pcm_hw_params_t* params;
+    snd_pcm_hw_params_t* hw_params;
+    snd_pcm_sw_params_t* sw_params;
     snd_pcm_uframes_t frames;
     snd_pcm_format_t format;
     unsigned int rate;
@@ -48,37 +49,49 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
 {
     CynthEngine* engine = calloc(1, sizeof(CynthEngine));
     int retval = 0;
-    if ((retval = snd_pcm_open(
-           &engine->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    if ((retval = snd_pcm_open(&engine->pcm_handle,
+                               device,
+                               SND_PCM_STREAM_PLAYBACK,
+                               0)) < 0) {
         CLOG_ERROR("ERROR: Can't open \"%s\" PCM device. %s",
                    device,
                    snd_strerror(retval));
         return NULL;
     }
 
-    snd_pcm_hw_params_malloc(&engine->params);
-    snd_pcm_hw_params_any(engine->pcm_handle, engine->params);
+    snd_pcm_hw_params_malloc(&engine->hw_params);
+    snd_pcm_hw_params_any(engine->pcm_handle, engine->hw_params);
 
     snd_pcm_hw_params_set_access(
-      engine->pcm_handle, engine->params, SND_PCM_ACCESS_RW_INTERLEAVED);
+      engine->pcm_handle, engine->hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
     snd_pcm_hw_params_set_format(engine->pcm_handle,
-                                 engine->params,
+                                 engine->hw_params,
                                  sample_format_cynth_to_alsa(ss->format));
     snd_pcm_hw_params_set_channels(
-      engine->pcm_handle, engine->params, ss->channels);
+      engine->pcm_handle, engine->hw_params, ss->channels);
     snd_pcm_hw_params_set_rate_near(
-      engine->pcm_handle, engine->params, &ss->rate, 0);
+      engine->pcm_handle, engine->hw_params, &ss->rate, 0);
 
-    if ((retval = snd_pcm_hw_params(engine->pcm_handle, engine->params)) < 0) {
+    unsigned int buffer_time = 20000; // 20ms buffer
+    unsigned int period_time = 5000;  // 5ms period
+    int dir = 0;
+    snd_pcm_hw_params_set_buffer_time_near(
+      engine->pcm_handle, engine->hw_params, &buffer_time, &dir);
+    snd_pcm_hw_params_set_period_time_near(
+      engine->pcm_handle, engine->hw_params, &period_time, &dir);
+
+    if ((retval = snd_pcm_hw_params(engine->pcm_handle, engine->hw_params)) <
+        0) {
         CLOG_ERROR("ERROR: Can't set hardware params. %s",
                    snd_strerror(retval));
         return NULL;
     }
 
-    snd_pcm_hw_params_free(engine->params);
-    snd_pcm_prepare(engine->pcm_handle);
+    snd_pcm_hw_params_free(engine->hw_params);
 
-    snd_pcm_hw_params_get_period_size(engine->params, &engine->frames, 0);
+    snd_pcm_hw_params_get_period_size(engine->hw_params, &engine->frames, 0);
+
+    snd_pcm_prepare(engine->pcm_handle);
 
     return engine;
 }
@@ -87,7 +100,7 @@ uint32_t
 cynth_engine_get_period_size(CynthEngine* engine)
 {
     snd_pcm_uframes_t period_size;
-    snd_pcm_hw_params_get_period_size(engine->params, &period_size, 0);
+    snd_pcm_hw_params_get_period_size(engine->hw_params, &period_size, 0);
     return period_size;
 }
 
@@ -96,25 +109,27 @@ cynth_engine_write_buffer(CynthEngine* engine,
                           const CynthBuffer* buffer,
                           size_t frame_amount)
 {
+    snd_pcm_state_t state = snd_pcm_state(engine->pcm_handle);
     snd_pcm_sframes_t frames_left = frame_amount;
     int16_t* ptr = buffer->data;
 
     snd_pcm_uframes_t period_size;
-    snd_pcm_hw_params_get_period_size(engine->params, &period_size, 0);
+    snd_pcm_hw_params_get_period_size(engine->hw_params, &period_size, 0);
 
     while (frames_left > 0) {
         snd_pcm_sframes_t retval =
           snd_pcm_writei(engine->pcm_handle,
                          ptr,
                          period_size > frames_left ? frames_left : period_size);
+        // printf("Write i retval: %ld\n", retval);
 
         if (retval == -EPIPE) {
             CLOG_WARNING("Buffer underrun: %s", snd_strerror(retval));
             snd_pcm_recover(engine->pcm_handle, retval, false);
             continue;
         } else if (retval < 0) {
-            CLOG_ERROR("Can't write to PCM device. %s", snd_strerror(retval));
-            return CYNTH_ERROR_WRITE;
+            CLOG_ERROR("Can't write to PCM device. %s",
+            snd_strerror(retval)); return CYNTH_ERROR_WRITE;
         }
 
         ptr += retval * buffer->ss.channels;

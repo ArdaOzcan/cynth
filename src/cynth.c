@@ -1,6 +1,8 @@
 #include "cynth.h"
+#include "ccore.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -16,32 +18,36 @@ cynth_midi_track_to_notes(CynthMIDITrackInfo track,
                           size_t* note_amount)
 {
     uint32_t i = 0, w = 0, t = 0;
+    bool* used = calloc(array_len(track.events), sizeof(bool));
+
     for (i = 0; i < array_len(track.events); i++) {
         CynthMIDIEvent evt = track.events[i];
         t += evt.delta_time;
-        if (evt.type == CYNTH_MIDI_EVENT_NOTE_ON) {
-            size_t j = i;
-            uint32_t duration = 0;
-            for (; j < array_len(track.events); j++) {
-                duration += track.events[j].delta_time;
-                if (track.events[j].type == CYNTH_MIDI_EVENT_NOTE_OFF &&
-                    track.events[j].note.key ==
-                      evt.note.key) { /* Found pair event */
-                    CynthNote note = { 0 };
-                    note.duration =
+        if (evt.type != CYNTH_MIDI_EVENT_NOTE_ON) {
+            continue;
+        }
 
-                      cynth_midi_time_to_seconds(header, duration);
-                    note.start_time = cynth_midi_time_to_seconds(header, t);
-                    note.frequency = cynth_midi_to_freq(evt.note.key);
-                    note.volume = evt.note.velocity / 127.0f;
-                    note.volume *= 0.15f;
-                    notes[w++] = note;
-                    break;
-                }
+        size_t j = i;
+        uint32_t duration = 0;
+        for (; j < array_len(track.events); j++) {
+            duration += track.events[j].delta_time;
+            if (track.events[j].type == CYNTH_MIDI_EVENT_NOTE_OFF &&
+                track.events[j].note.key == evt.note.key && !used[j]) {
+                /* Found pair event */
+                used[j] = true;
+                CynthNote note = { 0 };
+                note.duration = cynth_midi_time_to_seconds(header, duration);
+                note.start_time = cynth_midi_time_to_seconds(header, t);
+                note.frequency = cynth_midi_to_freq(evt.note.key);
+                note.volume = evt.note.velocity / 127.0f;
+                note.volume *= 0.15f;
+                notes[w++] = note;
+                break;
             }
         }
     }
 
+    free(used);
     *note_amount = w;
 }
 
@@ -146,23 +152,23 @@ cynth_frames_to_seconds(uint32_t frames, const CynthSampleSpec* ss)
 }
 
 double
-cynth_envelope_get_volume(const CynthEnvelope* envelope,
+cynth_envelope_get_volume(CynthEnvelope envelope,
                           double time_since_note_start,
                           double time_since_note_end)
 {
     double env = 0;
     double duration = time_since_note_start - time_since_note_end;
-    if (duration < envelope->attack) {
-        env = (duration / envelope->attack);
-    } else if (duration < envelope->decay + envelope->attack) {
-        double t = (duration - envelope->attack) / envelope->decay;
-        env = 1.0 + t * (envelope->sustain - 1.0);
+    if (duration < envelope.attack) {
+        env = (duration / envelope.attack);
+    } else if (duration < envelope.decay + envelope.attack) {
+        double t = (duration - envelope.attack) / envelope.decay;
+        env = 1.0 + t * (envelope.sustain - 1.0);
     } else {
-        env = envelope->sustain;
+        env = envelope.sustain;
     }
 
     if (time_since_note_end > 0) {
-        env *= 1 - (time_since_note_end / envelope->release);
+        env *= 1 - (time_since_note_end / envelope.release);
     }
 
     if (env < 0)
@@ -423,7 +429,7 @@ cynth_voice_note_end(CynthVoice* voice)
 void
 cynth_voice_init(CynthVoice* voice,
                  float (*wave_fn)(float),
-                 const CynthEnvelope* envelope)
+                 CynthEnvelope envelope)
 {
     voice->oscillator = (CynthOscillator){ (rand() % 100) / 100.0, wave_fn };
     voice->envelope = envelope;
@@ -432,7 +438,7 @@ cynth_voice_init(CynthVoice* voice,
 void
 cynth_synthesizer_init(CynthSynthesizer* s,
                        float (*wave_fn)(float),
-                       const CynthEnvelope* envelope)
+                       CynthEnvelope envelope)
 {
     s->wave_fn = wave_fn;
     s->voice_amount = 0;
@@ -476,7 +482,7 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
                 break;
 
             if (evt.type == CYNTH_MIDI_EVENT_NOTE_ON) {
-                cynth_synthesizer_note_start(s, s->envelope, evt.note.key);
+                cynth_synthesizer_note_start(s, evt.note.key);
             } else if (evt.type == CYNTH_MIDI_EVENT_NOTE_OFF) {
                 cynth_synthesizer_note_end(s, evt.note.key);
             }
@@ -496,7 +502,6 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 
 void
 cynth_synthesizer_note_start(CynthSynthesizer* s,
-                             const CynthEnvelope* envelope,
                              uint8_t note)
 {
     if (s->voice_amount >= CYNTH_SYNTHESIZER_MAX_VOICE) {
@@ -504,16 +509,8 @@ cynth_synthesizer_note_start(CynthSynthesizer* s,
         return;
     }
 
-    // size_t i = 0;
-    // for (; i < s->voice_amount; i++) {
-    //     if (!s->voices[i].is_note_on && s->voices[i].current_note == note) {
-    //         cynth_voice_note_start(&s->voices[i], note);
-    //         return;
-    //     }
-    // }
-
     CynthVoice v = { 0 };
-    cynth_voice_init(&v, s->wave_fn, envelope);
+    cynth_voice_init(&v, s->wave_fn, s->envelope);
     cynth_voice_note_start(&v, note);
     s->voices[s->voice_amount++] = v;
     CLOG_DEBUG("[+]New voice amount: %d", s->voice_amount);
@@ -527,6 +524,7 @@ cynth_synthesizer_note_end(CynthSynthesizer* s, uint8_t note)
         if (s->voices[v].is_note_on && s->voices[v].current_note == note) {
             cynth_voice_note_end(&s->voices[v]);
             CLOG_DEBUG("Note %d ended.", note);
+            break;
         }
     }
 }
@@ -547,7 +545,7 @@ cynth_synthesizer_write_to_buffer(CynthSynthesizer* s,
           voice, buffer, start_frame, frame_amount, volume);
 
         bool release_ended = voice->frames_since_note_end >
-                             voice->envelope->release * buffer->ss.rate;
+                             voice->envelope.release * buffer->ss.rate;
         if (!release_ended)
             continue;
 

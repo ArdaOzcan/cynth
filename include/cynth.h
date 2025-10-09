@@ -102,7 +102,7 @@ typedef struct
 {
     bool is_note_on;
     uint8_t current_note;
-    const CynthEnvelope* envelope;
+    CynthEnvelope envelope;
     uint32_t frames_since_note_start;
     uint32_t frames_since_note_end;
     CynthOscillator oscillator;
@@ -112,7 +112,7 @@ typedef struct
 {
     uint8_t voice_amount;
     float (*wave_fn)(float);
-    const CynthEnvelope* envelope;
+    CynthEnvelope envelope;
     CynthVoice voices[CYNTH_SYNTHESIZER_MAX_VOICE];
 } CynthSynthesizer;
 
@@ -197,7 +197,7 @@ double
 cynth_frames_to_seconds(uint32_t frames, const CynthSampleSpec* ss);
 
 double
-cynth_envelope_get_volume(const CynthEnvelope* envelope,
+cynth_envelope_get_volume(CynthEnvelope envelope,
                           double time_since_note_start,
                           double time_since_note_end);
 
@@ -257,13 +257,13 @@ cynth_voice_note_end(CynthVoice* voice);
 void
 cynth_voice_init(CynthVoice* voice,
                  float (*wave_fn)(float),
-                 const CynthEnvelope* envelope);
+                 CynthEnvelope envelope);
 
 /* Synthesizer */
 void
 cynth_synthesizer_init(CynthSynthesizer* s,
                        float (*wave_fn)(float),
-                       const CynthEnvelope* envelope);
+                       CynthEnvelope envelope);
 
 void
 cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
@@ -275,7 +275,6 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 
 void
 cynth_synthesizer_note_start(CynthSynthesizer* s,
-                             const CynthEnvelope* envelope,
                              uint8_t note);
 
 void
