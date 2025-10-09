@@ -438,8 +438,10 @@ cynth_voice_init(CynthVoice* voice,
 void
 cynth_synthesizer_init(CynthSynthesizer* s,
                        float (*wave_fn)(float),
+                       float volume,
                        CynthEnvelope envelope)
 {
+    s->volume = volume;
     s->wave_fn = wave_fn;
     s->voice_amount = 0;
     s->envelope = envelope;
@@ -538,11 +540,11 @@ cynth_synthesizer_write_to_buffer(CynthSynthesizer* s,
     /* Loop must be reversed so we can safely
      * remove elements during the loop. */
     int v = 0;
-    double volume = 0.1;
+    double volume = 0.25;
     for (v = s->voice_amount - 1; v >= 0; v--) {
         CynthVoice* voice = &s->voices[v];
         cynth_voice_add_to_buffer(
-          voice, buffer, start_frame, frame_amount, volume);
+          voice, buffer, start_frame, frame_amount, volume * s->volume);
 
         bool release_ended = voice->frames_since_note_end >
                              voice->envelope.release * buffer->ss.rate;
