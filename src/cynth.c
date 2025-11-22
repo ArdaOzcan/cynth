@@ -117,35 +117,6 @@ cynth_square_normalized(float t)
 }
 
 double
-cynth_midi_time_to_seconds(CynthMIDIHeader header, uint32_t delta_time)
-{
-    if (header.division & 0x8000) {
-        /* Negative SMPT */
-        int8_t smpte = (int8_t)(header.division & 0x7F00);
-        uint8_t ticks_per_frame = header.division & 0x00FF;
-        /* CLOG_INFO("Division: 0b%016b. SMPTE: %d, tpf: %u",
-                  header.division,
-                  smpte,
-                  ticks_per_frame); */
-    } else {
-        /* Ticks per quarter note */
-        uint16_t ticks_per_quarter_note = header.division & 0x7FFF;
-        /* CLOG_INFO("Division: Ticks per quarter note: %u",
-                  ticks_per_quarter_note); */
-        if (ticks_per_quarter_note == 0) {
-            CLOG_WARNING("Ticks per quarter note is zero.");
-            return 0;
-        }
-
-        double seconds_per_quarter = (double)header.tempo / 1e6;
-        double quarter_notes = (double)delta_time / ticks_per_quarter_note;
-        return seconds_per_quarter * quarter_notes;
-    }
-
-    return delta_time * 0.0066f;
-}
-
-double
 cynth_frames_to_seconds(uint32_t frames, const CynthSampleSpec* ss)
 {
     return (double)frames / ss->rate;
@@ -503,8 +474,7 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 }
 
 void
-cynth_synthesizer_note_start(CynthSynthesizer* s,
-                             uint8_t note)
+cynth_synthesizer_note_start(CynthSynthesizer* s, uint8_t note)
 {
     if (s->voice_amount >= CYNTH_SYNTHESIZER_MAX_VOICE) {
         CLOG_WARNING("Synthesizer max. voice capacity reached.");

@@ -92,7 +92,7 @@ byte_reader_read_vlq_be32(ByteReader* reader)
     return val;
 }
 
-void
+static void
 byte_reader_init(ByteReader* reader, const void* data, size_t size)
 {
     reader->data = data;
@@ -439,4 +439,48 @@ cynth_midi_import(const void* file_data,
     }
 
     *out_midi = midi;
+}
+
+double
+cynth_midi_time_to_seconds(CynthMIDIHeader header, uint32_t delta_time)
+{
+    if (header.division & 0x8000) {
+        /* Negative SMPT */
+        int8_t smpte = (int8_t)(header.division & 0x7F00 >> 8);
+        uint8_t ticks_per_frame = header.division & 0x00FF;
+
+        float coeff = 0.0f;
+        switch (smpte) {
+            case -29:
+                coeff = 29.97;
+                break;
+            case -24:
+            case -25:
+            case -30:
+                coeff = (float)(-smpte);
+                break;
+            default:
+                CLOG_ERROR(
+                  "MIDI time could not be calculated: Negative SMPTE should be "
+                  "one of these values: -24, -25, -29, -30. It was %d.",
+                  smpte);
+                return 0.0;
+        }
+
+        return coeff * delta_time;
+        /* CLOG_INFO(); */
+    } else {
+        /* Ticks per quarter note */
+        uint16_t ticks_per_quarter_note = header.division & 0x7FFF;
+        /* CLOG_INFO("Division: Ticks per quarter note: %u",
+                  ticks_per_quarter_note); */
+        if (ticks_per_quarter_note == 0) {
+            CLOG_WARNING("Ticks per quarter note is zero.");
+            return 0;
+        }
+
+        double seconds_per_quarter = (double)header.tempo / 1e6;
+        double quarter_notes = (double)delta_time / ticks_per_quarter_note;
+        return seconds_per_quarter * quarter_notes;
+    }
 }
