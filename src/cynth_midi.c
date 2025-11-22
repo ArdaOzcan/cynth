@@ -402,7 +402,7 @@ cynth_midi_import(const void* file_data,
                   CynthMIDIObject* out_midi)
 {
     VArena varena = { 0 };
-    varena_init(&varena, MEGABYTE);
+    varena_init(&varena, 1024 * MEGABYTE);
     Allocator alloc = varena_allocator(&varena);
     original_alloc = alloc.alloc;
     original_realloc = alloc.realloc;

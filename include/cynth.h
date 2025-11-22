@@ -110,11 +110,11 @@ typedef struct
 
 typedef struct
 {
-    float volume;
-    size_t voice_amount;
-    float (*wave_fn)(float);
-    CynthEnvelope envelope;
     CynthVoice voices[CYNTH_SYNTHESIZER_MAX_VOICE];
+    CynthEnvelope envelope;
+    size_t voice_amount;
+    float volume;
+    float (*wave_fn)(float);
 } CynthSynthesizer;
 
 typedef struct CynthEngine CynthEngine;

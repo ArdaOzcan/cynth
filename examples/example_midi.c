@@ -101,7 +101,7 @@ test(void)
         .attack = 0.015f, .decay = 0.05f, .sustain = 0.5f, .release = 0.3f
     };
     CynthSynthesizer synthesizer = { 0 };
-    cynth_synthesizer_init(&synthesizer, wave_custom, &envelope);
+    cynth_synthesizer_init(&synthesizer, wave_custom, 1.0f, envelope);
 
     CynthSampleSpec ss = { .rate = 44100,
                            .format = CYNTH_SAMPLE_S16LE,
