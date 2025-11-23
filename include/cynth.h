@@ -53,7 +53,7 @@ typedef struct
     CynthMIDIFormat format;
     uint16_t num_tracks;
     uint16_t division;
-	uint32_t tempo;
+    uint32_t tempo;
 } CynthMIDIHeader;
 
 typedef struct
@@ -90,7 +90,6 @@ typedef struct
     CynthMIDIHeader header;
     CynthMIDITrackInfo* tracks;
 } CynthMIDIObject;
-
 
 typedef struct
 {
@@ -276,8 +275,7 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
                                    size_t event_amount);
 
 void
-cynth_synthesizer_note_start(CynthSynthesizer* s,
-                             uint8_t note);
+cynth_synthesizer_note_start(CynthSynthesizer* s, uint8_t note);
 
 void
 cynth_synthesizer_note_end(CynthSynthesizer* s, uint8_t note);

@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const float MICROSEC_TO_SEC = 1e-6;
+
 typedef struct
 {
     const uint8_t* data;
@@ -472,14 +474,14 @@ cynth_midi_time_to_seconds(CynthMIDIHeader header, uint32_t delta_time)
     } else {
         /* Ticks per quarter note */
         uint16_t ticks_per_quarter_note = header.division & 0x7FFF;
-        /* CLOG_INFO("Division: Ticks per quarter note: %u",
-                  ticks_per_quarter_note); */
+        CLOG_DEBUG("Division: Ticks per quarter note: %u",
+                   ticks_per_quarter_note);
         if (ticks_per_quarter_note == 0) {
             CLOG_WARNING("Ticks per quarter note is zero.");
             return 0;
         }
 
-        double seconds_per_quarter = (double)header.tempo / 1e6;
+        double seconds_per_quarter = (double)header.tempo * MICROSEC_TO_SEC;
         double quarter_notes = (double)delta_time / ticks_per_quarter_note;
         return seconds_per_quarter * quarter_notes;
     }

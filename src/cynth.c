@@ -129,16 +129,17 @@ cynth_envelope_get_volume(CynthEnvelope envelope,
 {
     double env = 0;
     double duration = time_since_note_start - time_since_note_end;
-    if (duration < envelope.attack) {
+    if (envelope.attack > 0 && duration < envelope.attack) {
         env = (duration / envelope.attack);
-    } else if (duration < envelope.decay + envelope.attack) {
+    } else if (envelope.decay > 0 &&
+               duration < envelope.decay + envelope.attack) {
         double t = (duration - envelope.attack) / envelope.decay;
         env = 1.0 + t * (envelope.sustain - 1.0);
     } else {
         env = envelope.sustain;
     }
 
-    if (time_since_note_end > 0) {
+    if (envelope.release > 0 && time_since_note_end > 0) {
         env *= 1 - (time_since_note_end / envelope.release);
     }
 

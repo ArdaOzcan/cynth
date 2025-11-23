@@ -88,7 +88,7 @@ wave_custom(float t)
 void
 test(void)
 {
-    clog_log_level_set(CLOG_LOG_LEVEL_INFO);
+    clog_log_level_set(CLOG_LOG_LEVEL_DEBUG);
 
     size_t size = 0;
     void* file_data = read_file_to_buffer("songs/BohemianRhapsody.mid", &size);
