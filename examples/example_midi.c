@@ -56,10 +56,10 @@ clamp_i16(int32_t val, int16_t min, int16_t max)
 void
 cynth_filter_delay(const CynthBuffer* buffer, float offset_as_sec, float volume)
 {
-    size_t frame = 0;
+    size_t frame           = 0;
     size_t offset_as_frame = offset_as_sec * buffer->ss.rate;
     for (frame = buffer->frame_amount - offset_as_frame; frame > 0; --frame) {
-        int16_t* left = &buffer->data[frame * 2 + offset_as_frame];
+        int16_t* left  = &buffer->data[frame * 2 + offset_as_frame];
         int16_t* right = &buffer->data[frame * 2 + offset_as_frame + 1];
 
         int32_t added_sample_l = volume * buffer->data[frame * 2];
@@ -69,7 +69,7 @@ cynth_filter_delay(const CynthBuffer* buffer, float offset_as_sec, float volume)
         int32_t new_sample_r =
           clamp_i16(*right + added_sample_r, INT16_MIN, INT16_MAX);
 
-        *left = new_sample_l;
+        *left  = new_sample_l;
         *right = new_sample_r;
     }
 }
@@ -90,7 +90,7 @@ test(void)
 {
     clog_log_level_set(CLOG_LOG_LEVEL_DEBUG);
 
-    size_t size = 0;
+    size_t size     = 0;
     void* file_data = read_file_to_buffer("songs/BohemianRhapsody.mid", &size);
     assert(file_data);
 
@@ -103,9 +103,9 @@ test(void)
     CynthSynthesizer synthesizer = { 0 };
     cynth_synthesizer_init(&synthesizer, wave_custom, 1.0f, envelope);
 
-    CynthSampleSpec ss = { .rate = 44100,
-                           .format = CYNTH_SAMPLE_S16LE,
-                           .channels = 2 };
+    CynthSampleSpec ss  = { .rate     = 44100,
+                            .format   = CYNTH_SAMPLE_S16LE,
+                            .channels = 2 };
     CynthEngine* engine = cynth_engine_init(&ss, "default");
 
     size_t t = 0;
@@ -127,7 +127,7 @@ int
 read_midi_and_play(void)
 {
     clog_log_level_set(CLOG_LOG_LEVEL_DEBUG);
-    size_t size = 0;
+    size_t size     = 0;
     void* file_data = read_file_to_buffer("songs/IstiklalMarsi.mid", &size);
     assert(file_data);
 
@@ -141,9 +141,9 @@ read_midi_and_play(void)
     cynth_midi_track_to_notes(midi.tracks[t], midi.header, notes, &note_amount);
 
     CynthEngine* engine;
-    CynthSampleSpec ss = { .format = CYNTH_SAMPLE_S16LE,
+    CynthSampleSpec ss = { .format   = CYNTH_SAMPLE_S16LE,
                            .channels = 2,
-                           .rate = 44100 };
+                           .rate     = 44100 };
 
     engine = cynth_engine_init(&ss, "default");
 

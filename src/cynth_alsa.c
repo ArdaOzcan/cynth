@@ -48,11 +48,9 @@ CynthEngine*
 cynth_engine_init(CynthSampleSpec* ss, const char* device)
 {
     CynthEngine* engine = calloc(1, sizeof(CynthEngine));
-    int retval = 0;
-    if ((retval = snd_pcm_open(&engine->pcm_handle,
-                               device,
-                               SND_PCM_STREAM_PLAYBACK,
-                               0)) < 0) {
+    int retval          = 0;
+    if ((retval = snd_pcm_open(
+           &engine->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
         CLOG_ERROR("ERROR: Can't open \"%s\" PCM device. %s",
                    device,
                    snd_strerror(retval));
@@ -74,7 +72,7 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
 
     unsigned int buffer_time = 20000; // 20ms buffer
     unsigned int period_time = 5000;  // 5ms period
-    int dir = 0;
+    int dir                  = 0;
     snd_pcm_hw_params_set_buffer_time_near(
       engine->pcm_handle, engine->hw_params, &buffer_time, &dir);
     snd_pcm_hw_params_set_period_time_near(
@@ -109,9 +107,9 @@ cynth_engine_write_buffer(CynthEngine* engine,
                           const CynthBuffer* buffer,
                           size_t frame_amount)
 {
-    snd_pcm_state_t state = snd_pcm_state(engine->pcm_handle);
+    snd_pcm_state_t state         = snd_pcm_state(engine->pcm_handle);
     snd_pcm_sframes_t frames_left = frame_amount;
-    int16_t* ptr = buffer->data;
+    int16_t* ptr                  = buffer->data;
 
     snd_pcm_uframes_t period_size;
     snd_pcm_hw_params_get_period_size(engine->hw_params, &period_size, 0);
@@ -128,8 +126,8 @@ cynth_engine_write_buffer(CynthEngine* engine,
             snd_pcm_recover(engine->pcm_handle, retval, false);
             continue;
         } else if (retval < 0) {
-            CLOG_ERROR("Can't write to PCM device. %s",
-            snd_strerror(retval)); return CYNTH_ERROR_WRITE;
+            CLOG_ERROR("Can't write to PCM device. %s", snd_strerror(retval));
+            return CYNTH_ERROR_WRITE;
         }
 
         ptr += retval * buffer->ss.channels;

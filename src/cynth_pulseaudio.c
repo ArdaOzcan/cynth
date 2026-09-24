@@ -30,20 +30,20 @@ CynthEngine*
 cynth_engine_init(const CynthSampleSpec* ss)
 {
     pa_sample_spec pa_ss = { 0 };
-    pa_ss.format = (pa_sample_format_t)ss->format;
-    pa_ss.channels = ss->channels;
-    pa_ss.rate = ss->rate;
+    pa_ss.format         = (pa_sample_format_t)ss->format;
+    pa_ss.channels       = ss->channels;
+    pa_ss.rate           = ss->rate;
 
     CynthEngine* engine = calloc(1, sizeof(CynthEngine));
-    engine->simple = pa_simple_new(NULL,
-                                   "CynthDemo",
-                                   PA_STREAM_PLAYBACK,
-                                   NULL,
-                                   "Music",
-                                   &pa_ss,
-                                   NULL,
-                                   NULL,
-                                   NULL);
+    engine->simple      = pa_simple_new(NULL,
+                                        "CynthDemo",
+                                        PA_STREAM_PLAYBACK,
+                                        NULL,
+                                        "Music",
+                                        &pa_ss,
+                                        NULL,
+                                        NULL,
+                                        NULL);
     return engine;
 }
 

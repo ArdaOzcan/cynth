@@ -1,5 +1,6 @@
 #include "cynth.h"
 #include "ccore.h"
+#include "clog.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,19 +28,19 @@ cynth_midi_track_to_notes(CynthMIDITrackInfo track,
             continue;
         }
 
-        size_t j = i;
+        size_t j          = i;
         uint32_t duration = 0;
         for (; j < array_len(track.events); j++) {
             duration += track.events[j].delta_time;
             if (track.events[j].type == CYNTH_MIDI_EVENT_NOTE_OFF &&
                 track.events[j].note.key == evt.note.key && !used[j]) {
                 /* Found pair event */
-                used[j] = true;
-                CynthNote note = { 0 };
-                note.duration = cynth_midi_time_to_seconds(header, duration);
+                used[j]         = true;
+                CynthNote note  = { 0 };
+                note.duration   = cynth_midi_time_to_seconds(header, duration);
                 note.start_time = cynth_midi_time_to_seconds(header, t);
-                note.frequency = cynth_midi_to_freq(evt.note.key);
-                note.volume = evt.note.velocity / 127.0f;
+                note.frequency  = cynth_midi_to_freq(evt.note.key);
+                note.volume     = evt.note.velocity / 127.0f;
                 note.volume *= 0.15f;
                 notes[w++] = note;
                 break;
@@ -83,7 +84,7 @@ cynth_freq_to_nearest_midi(double freq)
 double
 cynth_cents_from_freq(double freq)
 {
-    double m = cynth_freq_to_midi(freq);
+    double m       = cynth_freq_to_midi(freq);
     double nearest = (double)llround(m);
     return (m - nearest) * 100.0;
 }
@@ -127,14 +128,14 @@ cynth_envelope_get_volume(CynthEnvelope envelope,
                           double time_since_note_start,
                           double time_since_note_end)
 {
-    double env = 0;
+    double env      = 0;
     double duration = time_since_note_start - time_since_note_end;
     if (envelope.attack > 0 && duration < envelope.attack) {
         env = (duration / envelope.attack);
     } else if (envelope.decay > 0 &&
                duration < envelope.decay + envelope.attack) {
         double t = (duration - envelope.attack) / envelope.decay;
-        env = 1.0 + t * (envelope.sustain - 1.0);
+        env      = 1.0 + t * (envelope.sustain - 1.0);
     } else {
         env = envelope.sustain;
     }
@@ -155,9 +156,9 @@ cynth_buffer_init(CynthBuffer* buffer,
                   uint32_t frame_amount,
                   void* backing_data)
 {
-    buffer->ss = sample_spec;
+    buffer->ss           = sample_spec;
     buffer->frame_amount = frame_amount;
-    buffer->data = backing_data;
+    buffer->data         = backing_data;
     size_t size = sizeof(int16_t) * buffer->ss.channels * buffer->frame_amount;
     memset(buffer->data, 0, size);
 }
@@ -171,22 +172,22 @@ cynth_buffer_add_wave(const CynthBuffer* buffer,
                       float frequency,
                       float volume)
 {
-    float phase = 0;
-    size_t attack_frames = (size_t)(envelope.attack * buffer->ss.rate);
-    size_t decay_frames = (size_t)(envelope.decay * buffer->ss.rate);
+    float phase           = 0;
+    size_t attack_frames  = (size_t)(envelope.attack * buffer->ss.rate);
+    size_t decay_frames   = (size_t)(envelope.decay * buffer->ss.rate);
     size_t release_frames = (size_t)(envelope.release * buffer->ss.rate);
 
     float release_max = envelope.sustain;
     if (attack_frames > frame_amount) {
         float attack_t = (float)frame_amount / attack_frames;
-        release_max = attack_t;
+        release_max    = attack_t;
     } else if (attack_frames + decay_frames > frame_amount) {
         float decay_t = (float)(frame_amount - attack_frames) / decay_frames;
-        release_max = 1.0f + decay_t * (envelope.sustain - 1.0f);
+        release_max   = 1.0f + decay_t * (envelope.sustain - 1.0f);
     }
 
     int16_t* buffer_start = &buffer->data[start_frame * 2];
-    size_t frame = 0;
+    size_t frame          = 0;
     for (frame = 0; frame < frame_amount + release_frames; frame++) {
         phase = frequency * frame / buffer->ss.rate;
         if (phase >= 1.0f)
@@ -195,19 +196,19 @@ cynth_buffer_add_wave(const CynthBuffer* buffer,
         float env = envelope.sustain;
         if (frame > frame_amount) {
             float release_t = (float)(frame - frame_amount) / release_frames;
-            env = release_max * (1.0f - release_t);
+            env             = release_max * (1.0f - release_t);
         } else if (frame < attack_frames) {
             float attack_t = (float)frame / attack_frames;
             /* Linear */
             env = attack_t;
         } else if (frame <= attack_frames + decay_frames) {
             float decay_t = (float)(frame - attack_frames) / decay_frames;
-            env = 1.0f + decay_t * (envelope.sustain - 1.0f);
+            env           = 1.0f + decay_t * (envelope.sustain - 1.0f);
         }
 
         float s = wave_fn(phase) * env;
 
-        int16_t* left = &buffer_start[frame * 2];
+        int16_t* left  = &buffer_start[frame * 2];
         int16_t* right = &buffer_start[frame * 2 + 1];
 
         int32_t added_sample = (int32_t)(s * INT16_MAX * volume);
@@ -216,7 +217,7 @@ cynth_buffer_add_wave(const CynthBuffer* buffer,
         int32_t new_sample_r =
           clamp_i16(*right + added_sample, INT16_MIN, INT16_MAX);
 
-        *left = new_sample_l;
+        *left  = new_sample_l;
         *right = new_sample_r;
     }
 
@@ -233,7 +234,7 @@ cynth_buffer_write_notes(const CynthBuffer* buffer,
     size_t i = 0;
     for (i = 0; i < note_amount; i++) {
         printf("Note %zu\n", i);
-        CynthNote note = notes[i];
+        CynthNote note     = notes[i];
         size_t start_frame = (size_t)(note.start_time * buffer->ss.rate);
         cynth_buffer_add_wave(buffer,
                               envelope,
@@ -274,19 +275,19 @@ cynth_buffer_export_wav(const CynthBuffer* buffer, const char* out_path)
     size_t pcm_data_size =
       buffer->frame_amount * buffer->ss.channels * sizeof(int16_t);
 
-    CynthWAVHeader header = { .ChunkID = "RIFF",
-                              .ChunkSize = 36 + pcm_data_size,
-                              .Format = "WAVE",
-                              .Subchunk1ID = "fmt ",
+    CynthWAVHeader header = { .ChunkID       = "RIFF",
+                              .ChunkSize     = 36 + pcm_data_size,
+                              .Format        = "WAVE",
+                              .Subchunk1ID   = "fmt ",
                               .Subchunk1Size = 16,
-                              .AudioFormat = 1,
-                              .NumChannels = buffer->ss.channels,
-                              .SampleRate = buffer->ss.rate,
+                              .AudioFormat   = 1,
+                              .NumChannels   = buffer->ss.channels,
+                              .SampleRate    = buffer->ss.rate,
                               .ByteRate =
                                 buffer->ss.rate * buffer->ss.channels * 16 / 8,
-                              .BlockAlign = buffer->frame_amount * 16 / 8,
+                              .BlockAlign    = buffer->frame_amount * 16 / 8,
                               .BitsPerSample = 16,
-                              .Subchunk2ID = "data",
+                              .Subchunk2ID   = "data",
                               .Subchunk2Size = pcm_data_size };
 
     FILE* file = fopen(out_path, "wb");
@@ -326,7 +327,7 @@ cynth_voice_add_to_buffer(CynthVoice* voice,
     size_t f = start_frame;
     for (; f < frame_amount; f++) {
         double frequency = cynth_midi_to_freq(voice->current_note);
-        double env = cynth_envelope_get_volume(
+        double env       = cynth_envelope_get_volume(
           voice->envelope,
           (double)voice->frames_since_note_start / buffer->ss.rate,
           (double)voice->frames_since_note_end / buffer->ss.rate);
@@ -339,7 +340,7 @@ cynth_voice_add_to_buffer(CynthVoice* voice,
         }
         voice->frames_since_note_start++;
 
-        int16_t* left = &buffer->data[f * 2];
+        int16_t* left  = &buffer->data[f * 2];
         int16_t* right = &buffer->data[f * 2 + 1];
 
         int32_t added_sample = (int32_t)(sample * INT16_MAX * volume);
@@ -348,7 +349,7 @@ cynth_voice_add_to_buffer(CynthVoice* voice,
         int32_t new_sample_r =
           clamp_i16(*right + added_sample, INT16_MIN, INT16_MAX);
 
-        *left = new_sample_l;
+        *left  = new_sample_l;
         *right = new_sample_r;
     }
 }
@@ -364,7 +365,7 @@ cynth_voice_write_to_buffer(CynthVoice* voice,
     size_t f = start_frame;
     for (; f < frame_amount; f++) {
         double frequency = cynth_midi_to_freq(voice->current_note);
-        double env = cynth_envelope_get_volume(
+        double env       = cynth_envelope_get_volume(
           voice->envelope,
           (double)voice->frames_since_note_start / buffer->ss.rate,
           (double)voice->frames_since_note_end / buffer->ss.rate);
@@ -377,7 +378,7 @@ cynth_voice_write_to_buffer(CynthVoice* voice,
         }
         voice->frames_since_note_start++;
 
-        buffer->data[2 * f] = sample * INT16_MAX;
+        buffer->data[2 * f]     = sample * INT16_MAX;
         buffer->data[2 * f + 1] = sample * INT16_MAX;
     }
 }
@@ -385,16 +386,16 @@ cynth_voice_write_to_buffer(CynthVoice* voice,
 void
 cynth_voice_note_start(CynthVoice* voice, uint8_t note)
 {
-    voice->is_note_on = true;
-    voice->current_note = note;
+    voice->is_note_on              = true;
+    voice->current_note            = note;
     voice->frames_since_note_start = 0;
-    voice->frames_since_note_end = 0;
+    voice->frames_since_note_end   = 0;
 }
 
 void
 cynth_voice_note_end(CynthVoice* voice)
 {
-    voice->is_note_on = false;
+    voice->is_note_on            = false;
     voice->frames_since_note_end = 0;
 }
 
@@ -404,7 +405,7 @@ cynth_voice_init(CynthVoice* voice,
                  CynthEnvelope envelope)
 {
     voice->oscillator = (CynthOscillator){ (rand() % 100) / 100.0, wave_fn };
-    voice->envelope = envelope;
+    voice->envelope   = envelope;
 }
 
 void
@@ -413,10 +414,10 @@ cynth_synthesizer_init(CynthSynthesizer* s,
                        float volume,
                        CynthEnvelope envelope)
 {
-    s->volume = volume;
-    s->wave_fn = wave_fn;
+    s->volume       = volume;
+    s->wave_fn      = wave_fn;
     s->voice_amount = 0;
-    s->envelope = envelope;
+    s->envelope     = envelope;
 }
 
 void
@@ -429,8 +430,8 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 {
     CynthBuffer buffer = { 0 };
 
-    const uint16_t period_size = cynth_engine_get_period_size(engine);
-    uint32_t buffer_frame_length = period_size * 2;
+    const uint16_t PERIOD_SIZE   = cynth_engine_get_period_size(engine);
+    uint32_t buffer_frame_length = PERIOD_SIZE * 2;
     int16_t* backing_data =
       calloc(buffer_frame_length * ss.channels, sizeof(int16_t));
     cynth_buffer_init(&buffer, ss, buffer_frame_length, backing_data);
@@ -443,14 +444,15 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 
     for (; e < event_amount; p++) {
         double period_start_time =
-          cynth_frames_to_seconds(p * period_size, &ss);
+          cynth_frames_to_seconds(p * PERIOD_SIZE, &ss);
         double period_end_time =
-          cynth_frames_to_seconds((p + 1) * period_size, &ss);
+          cynth_frames_to_seconds((p + 1) * PERIOD_SIZE, &ss);
 
         for (; e < event_amount; e++) {
             CynthMIDIEvent evt = events[e];
-            double curr_evt_start = last_evt_start + cynth_midi_time_to_seconds(
-                                                       header, evt.delta_time);
+            double time_secs =
+              cynth_midi_time_to_seconds(header, evt.delta_time);
+            double curr_evt_start = last_evt_start + time_secs;
 
             if (curr_evt_start > period_end_time)
                 break;
@@ -466,8 +468,8 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
         }
 
         cynth_buffer_clear(&buffer);
-        cynth_synthesizer_write_to_buffer(s, &buffer, 0, period_size);
-        cynth_engine_write_buffer(engine, &buffer, period_size);
+        cynth_synthesizer_write_to_buffer(s, &buffer, 0, PERIOD_SIZE);
+        cynth_engine_write_buffer(engine, &buffer, PERIOD_SIZE);
     }
     clog_progress_finish(&prog);
 
@@ -486,20 +488,20 @@ cynth_synthesizer_note_start(CynthSynthesizer* s, uint8_t note)
     cynth_voice_init(&v, s->wave_fn, s->envelope);
     cynth_voice_note_start(&v, note);
     s->voices[s->voice_amount++] = v;
-    CLOG_DEBUG("[+]New voice amount: %d", s->voice_amount);
 }
 
-void
+bool
 cynth_synthesizer_note_end(CynthSynthesizer* s, uint8_t note)
 {
     size_t v = 0;
     for (; v < s->voice_amount; v++) {
         if (s->voices[v].is_note_on && s->voices[v].current_note == note) {
             cynth_voice_note_end(&s->voices[v]);
-            CLOG_DEBUG("Note %d ended.", note);
-            break;
+            return true;
         }
     }
+
+    return false;
 }
 
 void
@@ -510,7 +512,7 @@ cynth_synthesizer_write_to_buffer(CynthSynthesizer* s,
 {
     /* Loop must be reversed so we can safely
      * remove elements during the loop. */
-    int v = 0;
+    int v         = 0;
     double volume = 0.25;
     for (v = s->voice_amount - 1; v >= 0; v--) {
         CynthVoice* voice = &s->voices[v];
@@ -524,11 +526,10 @@ cynth_synthesizer_write_to_buffer(CynthSynthesizer* s,
 
         /* Remove voice */
         if (v != s->voice_amount - 1) {
-            CynthVoice temp = s->voices[v];
-            s->voices[v] = s->voices[s->voice_amount - 1];
+            CynthVoice temp                = s->voices[v];
+            s->voices[v]                   = s->voices[s->voice_amount - 1];
             s->voices[s->voice_amount - 1] = temp;
         }
         s->voice_amount--;
-        CLOG_DEBUG("[-]New voice amount: %d", s->voice_amount);
     }
 }

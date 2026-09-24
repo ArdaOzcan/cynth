@@ -15,8 +15,8 @@ main(void)
     int retval;
 
     snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-    unsigned int rate = 44100;
-    int channels = 2;
+    unsigned int rate       = 44100;
+    int channels            = 2;
 
     int seconds = 2;
     double freq = 440.0;
@@ -54,14 +54,14 @@ main(void)
 
     int16_t* buffer;
     int buffer_size = frames * channels;
-    buffer = (int16_t*)malloc(buffer_size * sizeof(int16_t));
+    buffer          = (int16_t*)malloc(buffer_size * sizeof(int16_t));
 
     int num_samples = seconds * rate;
     for (int i = 0; i < num_samples; i += frames) {
         for (int f = 0; f < frames; f++) {
-            double t = (double)(i + f) / rate;
-            double sample = sin(2.0 * PI * freq * t);
-            buffer[2 * f] = (int16_t)(sample * INT16_MAX);
+            double t          = (double)(i + f) / rate;
+            double sample     = sin(2.0 * PI * freq * t);
+            buffer[2 * f]     = (int16_t)(sample * INT16_MAX);
             buffer[2 * f + 1] = (int16_t)(sample * INT16_MAX);
         }
         retval = snd_pcm_writei(pcm_handle, buffer, frames);

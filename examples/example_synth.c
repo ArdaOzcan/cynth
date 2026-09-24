@@ -4187,10 +4187,10 @@ clamp_i16(int32_t val, int16_t min, int16_t max)
 void
 cynth_filter_delay(const CynthBuffer* buffer, float offset_as_sec, float volume)
 {
-    size_t frame = 0;
+    int frame              = 0;
     size_t offset_as_frame = offset_as_sec * buffer->ss.rate;
     for (frame = buffer->frame_amount - offset_as_frame; frame > 0; --frame) {
-        int16_t* left = &buffer->data[frame * 2 + offset_as_frame];
+        int16_t* left  = &buffer->data[frame * 2 + offset_as_frame];
         int16_t* right = &buffer->data[frame * 2 + offset_as_frame + 1];
 
         int32_t added_sample_l = volume * buffer->data[frame * 2];
@@ -4200,7 +4200,7 @@ cynth_filter_delay(const CynthBuffer* buffer, float offset_as_sec, float volume)
         int32_t new_sample_r =
           clamp_i16(*right + added_sample_r, INT16_MIN, INT16_MAX);
 
-        *left = new_sample_l;
+        *left  = new_sample_l;
         *right = new_sample_r;
     }
 }
@@ -4227,15 +4227,15 @@ main(void)
     CynthEngine* engine;
     CynthSampleSpec ss;
 
-    ss.format = PA_SAMPLE_S16NE;
+    ss.format   = PA_SAMPLE_S16NE;
     ss.channels = 2;
-    ss.rate = 44100;
+    ss.rate     = 44100;
 
     engine = cynth_engine_init(&ss, "default");
 
     VArena varena = { 0 };
     varena_init(&varena, 1 << 26);
-    Allocator alloc = varena_allocator(&varena);
+    Allocator alloc       = varena_allocator(&varena);
     float buffer_duration = 200.0f;
     int16_t* data =
       make(int16_t, buffer_duration* ss.rate* ss.channels, &alloc);
@@ -4263,10 +4263,11 @@ main(void)
     //                        note.volume);
     //
     cynth_buffer_write_notes(&buffer,
-                      notes_pink_panther,
-                      sizeof(notes_pink_panther) / sizeof(*notes_pink_panther),
-                      env,
-                      wave_custom);
+                             notes_pink_panther,
+                             sizeof(notes_pink_panther) /
+                               sizeof(*notes_pink_panther),
+                             env,
+                             wave_custom);
     cynth_filter_delay(&buffer, 0.5f, 0.25f);
     cynth_filter_delay(&buffer, 1.0f, 0.125f);
     cynth_filter_delay(&buffer, 1.5f, 0.025f);
@@ -4281,7 +4282,7 @@ main(void)
         return 1;
     }
 
-    size_t loop = 1;
+    size_t loop      = 1;
     CynthError error = { 0 };
     for (; loop > 0; --loop) {
         error = cynth_engine_write_buffer(engine, &buffer, buffer.frame_amount);

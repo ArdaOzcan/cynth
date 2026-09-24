@@ -43,8 +43,8 @@ typedef struct
 
 typedef enum
 {
-    CYNTH_MIDI_FORMAT_SINGLE = 0,
-    CYNTH_MIDI_FORMAT_VERTICAL = 1,
+    CYNTH_MIDI_FORMAT_SINGLE     = 0,
+    CYNTH_MIDI_FORMAT_VERTICAL   = 1,
     CYNTH_MIDI_FORMAT_HORIZONTAL = 2,
 } CynthMIDIFormat;
 
@@ -99,12 +99,12 @@ typedef struct
 
 typedef struct
 {
-    bool is_note_on;
-    uint8_t current_note;
+    CynthOscillator oscillator;
     CynthEnvelope envelope;
     uint32_t frames_since_note_start;
     uint32_t frames_since_note_end;
-    CynthOscillator oscillator;
+    uint8_t current_note;
+    bool is_note_on;
 } CynthVoice;
 
 typedef struct
@@ -277,7 +277,7 @@ cynth_synthesizer_play_midi_events(CynthSynthesizer* s,
 void
 cynth_synthesizer_note_start(CynthSynthesizer* s, uint8_t note);
 
-void
+bool
 cynth_synthesizer_note_end(CynthSynthesizer* s, uint8_t note);
 
 void
