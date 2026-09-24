@@ -253,7 +253,8 @@ cynth_midi_read_event_meta(ByteReader* reader, CynthMIDIHeader* header)
         case 0x06:
         case 0x07: {
             char* text = malloc(length + 1);
-            for (uint32_t i = 0; i < length; i++)
+            uint32_t i = 0;
+            for (i = 0; i < length; i++)
                 text[i] = *byte_reader_read(reader, uint8_t);
             text[length] = '\0';
             CLOG_DEBUG("Text Meta Event 0x%02X: %s", type, text);
