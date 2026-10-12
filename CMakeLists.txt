@@ -109,7 +109,8 @@ if(CYNTH_BUILD_EXAMPLES)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_executable(cynth_example_async ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_async.c)
-        target_link_libraries(cynth_example_async PRIVATE ALSA::ALSA)
+        target_link_libraries(cynth_example_async PRIVATE Cynth::cynth)
+        set_target_properties(cynth_example_async PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF)
         target_compile_options(cynth_example_async PRIVATE
             $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra>
         )

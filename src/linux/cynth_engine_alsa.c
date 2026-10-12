@@ -9,7 +9,7 @@ struct CynthEngine
     snd_pcm_t* pcm_handle;
     snd_pcm_hw_params_t* hw_params;
     snd_pcm_sw_params_t* sw_params;
-    snd_pcm_uframes_t frames;
+    snd_pcm_uframes_t period_size;
     snd_pcm_format_t format;
     unsigned int rate;
     int channels;
@@ -50,12 +50,16 @@ CynthEngine*
 cynth_engine_init(CynthSampleSpec* ss, const char* device)
 {
     CynthEngine* engine = calloc(1, sizeof(CynthEngine));
-    int retval          = 0;
+    if (engine == NULL) {
+        return NULL;
+    }
+    int retval = 0;
     if ((retval = snd_pcm_open(
            &engine->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
         CLOG_ERROR("ERROR: Can't open \"%s\" PCM device. %s",
                    device,
                    snd_strerror(retval));
+        free(engine);
         return NULL;
     }
 
@@ -84,12 +88,25 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
         0) {
         CLOG_ERROR("ERROR: Can't set hardware params. %s",
                    snd_strerror(retval));
+        snd_pcm_close(engine->pcm_handle);
+        snd_pcm_hw_params_free(engine->hw_params);
+        free(engine);
         return NULL;
     }
 
-    snd_pcm_hw_params_free(engine->hw_params);
+    /* Query period size BEFORE freeing hw_params (it becomes dangling after).
+     */
+    snd_pcm_uframes_t period = 0;
+    snd_pcm_hw_params_get_period_size(engine->hw_params, &period, 0);
+    engine->period_size = period;
+    if (engine->period_size == 0) {
+        engine->period_size = 1024;
+    }
+    engine->rate     = ss->rate;
+    engine->channels = ss->channels;
 
-    snd_pcm_hw_params_get_period_size(engine->hw_params, &engine->frames, 0);
+    snd_pcm_hw_params_free(engine->hw_params);
+    engine->hw_params = NULL;
 
     snd_pcm_prepare(engine->pcm_handle);
 
@@ -99,9 +116,10 @@ cynth_engine_init(CynthSampleSpec* ss, const char* device)
 uint32_t
 cynth_engine_get_period_size(CynthEngine* engine)
 {
-    snd_pcm_uframes_t period_size;
-    snd_pcm_hw_params_get_period_size(engine->hw_params, &period_size, 0);
-    return period_size;
+    if (engine == NULL) {
+        return 1024;
+    }
+    return (uint32_t)engine->period_size;
 }
 
 CynthError
@@ -141,7 +159,11 @@ cynth_engine_write_buffer(CynthEngine* engine,
 void
 cynth_engine_deinit(CynthEngine* engine)
 {
+    if (engine == NULL) {
+        return;
+    }
     snd_pcm_close(engine->pcm_handle);
+    free(engine);
 }
 
 CynthError

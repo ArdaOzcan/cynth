@@ -227,7 +227,6 @@ cynth_buffer_write_notes(const CynthBuffer* buffer,
 {
     size_t i = 0;
     for (i = 0; i < note_amount; i++) {
-        printf("Note %zu\n", i);
         CynthNote note     = notes[i];
         size_t start_frame = (size_t)(note.start_time * buffer->ss.rate);
         cynth_buffer_add_wave(buffer,
@@ -279,7 +278,7 @@ cynth_buffer_export_wav(const CynthBuffer* buffer, const char* out_path)
                               .SampleRate    = buffer->ss.rate,
                               .ByteRate =
                                 buffer->ss.rate * buffer->ss.channels * 16 / 8,
-                              .BlockAlign    = buffer->frame_amount * 16 / 8,
+                              .BlockAlign    = buffer->ss.channels * 16 / 8,
                               .BitsPerSample = 16,
                               .Subchunk2ID   = "data",
                               .Subchunk2Size = pcm_data_size };
