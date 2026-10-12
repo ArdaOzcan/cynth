@@ -143,9 +143,7 @@ uint32_t
 cynth_engine_get_period_size(CynthEngine* engine);
 
 CynthError
-cynth_engine_write_buffer(CynthEngine* engine,
-                          const CynthBuffer* buffer,
-                          size_t frame_amount);
+cynth_engine_write_buffer(CynthEngine* engine, const CynthBuffer* buffer, size_t frame_amount);
 
 void
 cynth_engine_deinit(CynthEngine* engine);
@@ -255,9 +253,7 @@ void
 cynth_voice_note_end(CynthVoice* voice);
 
 void
-cynth_voice_init(CynthVoice* voice,
-                 float (*wave_fn)(float),
-                 CynthEnvelope envelope);
+cynth_voice_init(CynthVoice* voice, float (*wave_fn)(float), CynthEnvelope envelope);
 
 /* Synthesizer */
 void
@@ -288,8 +284,6 @@ cynth_synthesizer_write_to_buffer(CynthSynthesizer* s,
 
 /* MIDI */
 void
-cynth_midi_import(const void* file_data,
-                  size_t file_size,
-                  CynthMIDIObject* out_midi);
+cynth_midi_import(const void* file_data, size_t file_size, CynthMIDIObject* out_midi);
 
 #endif

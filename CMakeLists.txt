@@ -16,14 +16,18 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ArdaOzcan/ccore.git
     GIT_TAG main
 )
-FetchContent_MakeAvailable(ccore)
+if(NOT TARGET ccore)
+    FetchContent_MakeAvailable(ccore)
+endif()
 
 FetchContent_Declare(
     clog
     GIT_REPOSITORY https://github.com/ArdaOzcan/clog.git
     GIT_TAG master
 )
-FetchContent_MakeAvailable(clog)
+if(NOT TARGET clog)
+    FetchContent_MakeAvailable(clog)
+endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PULSE libpulse-simple REQUIRED)
@@ -48,6 +52,7 @@ find_package(ALSA)
 
 target_link_libraries(cynth PUBLIC ALSA::ALSA ccore clog m ${PULSE_LIBRARIES})
 
+if(BUILD_EXAMPLES)
 add_executable(cynth_example_synth ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_synth.c)
 target_include_directories(cynth_example_synth PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
@@ -68,6 +73,7 @@ target_include_directories(cynth_example_async PRIVATE
     ${PULSE_INCLUDE_DIRS}       
 )
 target_link_libraries(cynth_example_async PRIVATE cynth ccore ${PULSE_LIBRARIES})
+endif()
 
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

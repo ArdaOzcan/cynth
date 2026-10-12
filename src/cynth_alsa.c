@@ -107,31 +107,30 @@ cynth_engine_write_buffer(CynthEngine* engine,
                           const CynthBuffer* buffer,
                           size_t frame_amount)
 {
-    snd_pcm_state_t state         = snd_pcm_state(engine->pcm_handle);
-    snd_pcm_sframes_t frames_left = frame_amount;
-    int16_t* ptr                  = buffer->data;
-
-    snd_pcm_uframes_t period_size;
-    snd_pcm_hw_params_get_period_size(engine->hw_params, &period_size, 0);
+    snd_pcm_sframes_t frames_left = (snd_pcm_sframes_t)frame_amount;
+    const int16_t* ptr            = buffer->data;
 
     while (frames_left > 0) {
-        snd_pcm_sframes_t retval =
-          snd_pcm_writei(engine->pcm_handle,
-                         ptr,
-                         period_size > frames_left ? frames_left : period_size);
-        // printf("Write i retval: %ld\n", retval);
+        snd_pcm_sframes_t written =
+          snd_pcm_writei(engine->pcm_handle, ptr, frames_left);
 
-        if (retval == -EPIPE) {
-            CLOG_WARNING("Buffer underrun: %s", snd_strerror(retval));
-            snd_pcm_recover(engine->pcm_handle, retval, false);
-            continue;
-        } else if (retval < 0) {
-            CLOG_ERROR("Can't write to PCM device. %s", snd_strerror(retval));
-            return CYNTH_ERROR_WRITE;
+        if (written < 0) {
+            if (written == -EPIPE) {
+                int err = snd_pcm_recover(engine->pcm_handle, (int)written, 1);
+                if (err < 0) {
+                    return CYNTH_ERROR_WRITE;
+                }
+                continue;
+            } else if (written == -EAGAIN) {
+                snd_pcm_wait(engine->pcm_handle, 100);
+                continue;
+            } else {
+                return CYNTH_ERROR_WRITE;
+            }
         }
 
-        ptr += retval * buffer->ss.channels;
-        frames_left -= retval;
+        ptr += written * buffer->ss.channels;
+        frames_left -= written;
     }
 
     return CYNTH_ERROR_NONE;
