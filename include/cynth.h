@@ -156,23 +156,23 @@ cynth_engine_drop(CynthEngine* engine);
 #pragma pack(push, 1)
 typedef struct
 {
-    char ChunkID[4];    /* "RIFF"*/
-    uint32_t ChunkSize; /* 36 + Subchunk2Size*/
-    char Format[4];     /* "WAVE"*/
+    char chunk_id[4];    /* "RIFF"*/
+    uint32_t chunk_size; /* 36 + Subchunk2Size*/
+    char format[4];      /* "WAVE"*/
 
     /* fmt Subchunk*/
-    char Subchunk1ID[4];    /* "fmt "*/
-    uint32_t Subchunk1Size; /* 16 for PCM*/
-    uint16_t AudioFormat;   /* PCM = 1*/
-    uint16_t NumChannels;   /* 1 = mono, 2 = stereo*/
-    uint32_t SampleRate;    /* e.g. 44100*/
-    uint32_t ByteRate;      /* SampleRate * NumChannels * BitsPerSample/8*/
-    uint16_t BlockAlign;    /* NumChannels * BitsPerSample/8*/
-    uint16_t BitsPerSample; /* e.g. 16*/
+    char subchunk1_id[4];     /* "fmt "*/
+    uint32_t subchunk1_size;  /* 16 for PCM*/
+    uint16_t audio_format;    /* PCM = 1*/
+    uint16_t num_channels;    /* 1 = mono, 2 = stereo*/
+    uint32_t sample_rate;     /* e.g. 44100*/
+    uint32_t byte_rate;       /* SampleRate * NumChannels * BitsPerSample/8*/
+    uint16_t block_align;     /* NumChannels * BitsPerSample/8*/
+    uint16_t bits_per_sample; /* e.g. 16*/
 
     /* data Subchunk*/
-    char Subchunk2ID[4];    /* "data"*/
-    uint32_t Subchunk2Size; /* NumSamples * NumChannels * BitsPerSample/8*/
+    char subchunk2_id[4];    /* "data"*/
+    uint32_t subchunk2_size; /* NumSamples * NumChannels * BitsPerSample/8*/
 } CynthWAVHeader;
 #pragma pack(pop)
 

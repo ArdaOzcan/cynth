@@ -268,20 +268,20 @@ cynth_buffer_export_wav(const CynthBuffer* buffer, const char* out_path)
     size_t pcm_data_size =
       buffer->frame_amount * buffer->ss.channels * sizeof(int16_t);
 
-    CynthWAVHeader header = { .ChunkID       = "RIFF",
-                              .ChunkSize     = 36 + pcm_data_size,
-                              .Format        = "WAVE",
-                              .Subchunk1ID   = "fmt ",
-                              .Subchunk1Size = 16,
-                              .AudioFormat   = 1,
-                              .NumChannels   = buffer->ss.channels,
-                              .SampleRate    = buffer->ss.rate,
-                              .ByteRate =
+    CynthWAVHeader header = { .chunk_id       = "RIFF",
+                              .chunk_size     = 36 + pcm_data_size,
+                              .format         = "WAVE",
+                              .subchunk1_id   = "fmt ",
+                              .subchunk1_size = 16,
+                              .audio_format   = 1,
+                              .num_channels   = buffer->ss.channels,
+                              .sample_rate    = buffer->ss.rate,
+                              .byte_rate =
                                 buffer->ss.rate * buffer->ss.channels * 16 / 8,
-                              .BlockAlign    = buffer->ss.channels * 16 / 8,
-                              .BitsPerSample = 16,
-                              .Subchunk2ID   = "data",
-                              .Subchunk2Size = pcm_data_size };
+                              .block_align     = buffer->ss.channels * 16 / 8,
+                              .bits_per_sample = 16,
+                              .subchunk2_id    = "data",
+                              .subchunk2_size  = pcm_data_size };
 
     FILE* file = fopen(out_path, "wb");
     if (file == NULL) {
