@@ -376,24 +376,25 @@ static void* (*original_realloc)(void*, size_t, size_t, void*);
 void*
 my_alloc(size_t size, void* ctx)
 {
-    const VArena* varena = (VArena*)ctx;
-    void* ptr            = original_alloc(size, ctx);
-    CLOG_DEBUG("Alloc with size %zu. Returned %p -> %p", size, ptr, ptr + size);
+    void* ptr = original_alloc(size, ctx);
+    CLOG_DEBUG("Alloc with size %zu. Returned %p -> %p",
+               size,
+               ptr,
+               (uintptr_t)ptr + size);
     return ptr;
 }
 
 void*
 my_realloc(void* start, size_t old_size, size_t new_size, void* context)
 {
-    const VArena* varena = (VArena*)context;
-    void* result         = original_realloc(start, old_size, new_size, context);
+    void* result = original_realloc(start, old_size, new_size, context);
     CLOG_DEBUG(
       "ReAlloc from %p -> %p (%zu bytes). Returning %p -> %p (%zu bytes)",
       start,
-      start + old_size,
+      (uintptr_t)start + old_size,
       old_size,
       result,
-      result + new_size,
+      (uintptr_t)result + new_size,
       new_size);
     return result;
 }
@@ -450,8 +451,8 @@ cynth_midi_time_to_seconds(CynthMIDIHeader header, uint32_t delta_time)
 {
     if (header.division & 0x8000) {
         /* Negative SMPT */
-        int8_t smpte            = (int8_t)(header.division & 0x7F00 >> 8);
-        uint8_t ticks_per_frame = header.division & 0x00FF;
+        int8_t smpte = (int8_t)(header.division & 0x7F00 >> 8);
+        /* uint8_t ticks_per_frame = header.division & 0x00FF; */
 
         float coeff = 0.0f;
         switch (smpte) {

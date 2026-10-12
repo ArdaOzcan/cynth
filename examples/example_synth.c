@@ -2,7 +2,6 @@
 
 #include "cynth.h"
 
-#include <pulse/simple.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -4227,7 +4226,7 @@ main(void)
     CynthEngine* engine;
     CynthSampleSpec ss;
 
-    ss.format   = PA_SAMPLE_S16NE;
+    ss.format   = CYNTH_SAMPLE_S16LE;
     ss.channels = 2;
     ss.rate     = 44100;
 

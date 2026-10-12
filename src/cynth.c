@@ -6,12 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-/* Windows implementation*/
-#else
-#include "cynth_alsa.c"
-#endif
-
 void
 cynth_midi_track_to_notes(CynthMIDITrackInfo track,
                           CynthMIDIHeader header,

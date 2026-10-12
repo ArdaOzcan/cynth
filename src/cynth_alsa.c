@@ -1,5 +1,6 @@
-#include "clog.h"
+#include "cynth.h"
 #include "cynth_common.h"
+#include "clog.h"
 #include <alsa/asoundlib.h>
 #include <stdio.h>
 #include <stdlib.h>
