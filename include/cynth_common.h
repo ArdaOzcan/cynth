@@ -26,7 +26,6 @@ typedef enum
 
     CYNTH_SAMPLE_FLOAT32BE,
     /**< 32 Bit IEEE floating point, big endian, range -1.0 to 1.0 */
-
     CYNTH_SAMPLE_S32LE,
     /**< Signed 32 Bit PCM, little endian (PC) */
 

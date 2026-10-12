@@ -58,7 +58,7 @@ main(void)
 
     int num_samples = seconds * rate;
     for (int i = 0; i < num_samples; i += frames) {
-        for (int f = 0; f < frames; f++) {
+        for (size_t f = 0; f < frames; f++) {
             double t          = (double)(i + f) / rate;
             double sample     = sin(2.0 * PI * freq * t);
             buffer[2 * f]     = (int16_t)(sample * INT16_MAX);

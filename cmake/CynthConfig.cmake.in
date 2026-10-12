@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_dependency(ALSA)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/CynthTargets.cmake")
+
+check_required_components(Cynth)

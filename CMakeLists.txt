@@ -48,31 +48,31 @@ set_target_properties(clog PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-set(CYNTH_SOURCES
+add_library(cynth
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cynth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cynth_midi.c
 )
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(ALSA REQUIRED)
-    list(APPEND CYNTH_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/cynth_alsa.c)
-else()
-    message(WARNING "Cynth: audio backend (ALSA) is only implemented for Linux; "
-        "building without cynth_engine_* backend on ${CMAKE_SYSTEM_NAME}.")
-endif()
-
-add_library(cynth ${CYNTH_SOURCES})
 add_library(Cynth::cynth ALIAS cynth)
 
 target_include_directories(cynth PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(cynth PRIVATE ccore::ccore clog::clog)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(ALSA REQUIRED)
+    target_sources(cynth PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/linux/cynth_engine_alsa.c)
     target_link_libraries(cynth PRIVATE ALSA::ALSA)
+elseif(WIN32)
+    target_sources(cynth PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/win32/cynth_engine_win32.c)
+    # TODO: target_link_libraries(cynth PRIVATE winmm) once the WinMM backend lands.
+else()
+    message(WARNING "Cynth: no audio backend for ${CMAKE_SYSTEM_NAME}; "
+        "building without cynth_engine_* implementation.")
 endif()
 
 if(UNIX)

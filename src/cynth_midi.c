@@ -51,7 +51,7 @@ cynth_midi_read_vlq(uint32_t vn, size_t* byte_length)
 {
     uint32_t result   = 0;
     uint8_t* vn_bytes = (uint8_t*)&vn;
-    unsigned int i    = 0;
+    int i             = 0;
     for (i = 3; i >= 0; i--) {
         uint8_t seven_bits = vn_bytes[i] & 0x7F;
         result |= seven_bits;

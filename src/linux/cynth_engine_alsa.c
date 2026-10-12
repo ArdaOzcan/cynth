@@ -1,11 +1,10 @@
-#include "cynth.h"
-#include "cynth_common.h"
 #include "clog.h"
+#include "cynth.h"
 #include <alsa/asoundlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct CynthEngine
+struct CynthEngine
 {
     snd_pcm_t* pcm_handle;
     snd_pcm_hw_params_t* hw_params;
@@ -14,7 +13,7 @@ typedef struct CynthEngine
     snd_pcm_format_t format;
     unsigned int rate;
     int channels;
-} CynthEngine;
+};
 
 static snd_pcm_format_t
 sample_format_cynth_to_alsa(CynthSampleFormat cynth)
@@ -41,8 +40,10 @@ sample_format_cynth_to_alsa(CynthSampleFormat cynth)
         case CYNTH_SAMPLE_MAX:
         case CYNTH_SAMPLE_INVALID:
             return SND_PCM_FORMAT_UNKNOWN;
-            break;
     }
+
+    /* Unreachable: the switch above covers every CynthSampleFormat value. */
+    return SND_PCM_FORMAT_UNKNOWN;
 }
 
 CynthEngine*
