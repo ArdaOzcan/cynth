@@ -21,36 +21,11 @@ if(CYNTH_IS_TOP_LEVEL AND NOT DEFINED CMAKE_EXPORT_COMPILE_COMMANDS)
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 endif()
 
-add_library(ccore STATIC vendor/ccore/ccore.c)
-add_library(ccore::ccore ALIAS ccore)
-target_include_directories(ccore PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-set_target_properties(ccore PROPERTIES
-    C_STANDARD 90
-    C_STANDARD_REQUIRED ON
-    C_EXTENSIONS OFF
-    POSITION_INDEPENDENT_CODE ON
-)
-
-add_library(clog STATIC vendor/clog/src/clog.c)
-add_library(clog::clog ALIAS clog)
-target_include_directories(clog PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-target_link_libraries(clog PUBLIC ccore::ccore)
-set_target_properties(clog PROPERTIES
-    C_STANDARD 90
-    C_STANDARD_REQUIRED ON
-    C_EXTENSIONS OFF
-    POSITION_INDEPENDENT_CODE ON
-)
-
 add_library(cynth
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cynth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cynth_midi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore/ccore.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/src/clog.c
 )
 add_library(Cynth::cynth ALIAS cynth)
 
@@ -59,9 +34,13 @@ target_include_directories(cynth PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include
 )
 
-target_link_libraries(cynth PRIVATE ccore::ccore clog::clog)
+if(UNIX)
+    target_compile_definitions(cynth PRIVATE _DEFAULT_SOURCE)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(ALSA REQUIRED)
@@ -91,24 +70,33 @@ set_target_properties(cynth PROPERTIES
 target_compile_options(cynth PRIVATE
     $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic>
 )
-target_compile_options(ccore PRIVATE
-    $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra>
-)
-target_compile_options(clog PRIVATE
-    $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra>
-)
 
 if(CYNTH_BUILD_EXAMPLES)
     add_executable(cynth_example_synth ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_synth.c)
-    target_link_libraries(cynth_example_synth PRIVATE Cynth::cynth ccore::ccore)
+    target_include_directories(cynth_example_synth PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include
+    )
+    target_link_libraries(cynth_example_synth PRIVATE Cynth::cynth)
     set_target_properties(cynth_example_synth PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF)
 
     add_executable(cynth_example_midi ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_midi.c)
-    target_link_libraries(cynth_example_midi PRIVATE Cynth::cynth ccore::ccore clog::clog)
+    target_include_directories(cynth_example_midi PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include
+    )
+    target_link_libraries(cynth_example_midi PRIVATE Cynth::cynth)
     set_target_properties(cynth_example_midi PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_executable(cynth_example_async ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_async.c)
+        target_include_directories(cynth_example_async PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore
+            ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include
+        )
         target_link_libraries(cynth_example_async PRIVATE Cynth::cynth)
         set_target_properties(cynth_example_async PROPERTIES C_STANDARD 99 C_EXTENSIONS OFF)
         target_compile_options(cynth_example_async PRIVATE
@@ -120,7 +108,7 @@ if(CYNTH_BUILD_EXAMPLES)
     endif()
 endif()
 
-install(TARGETS ccore clog cynth
+install(TARGETS cynth
     EXPORT CynthTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -132,13 +120,6 @@ install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
-)
-
-install(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore/ccore.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/ccore/vmem.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/clog/include/clog.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 install(
